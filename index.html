@@ -9,8 +9,7 @@
   <style>
     .hero {
       background-image: linear-gradient(rgba(8, 8, 8, 0.75), rgba(8, 8, 8, 0.88)), 
-                  url('assets/hero-gorilla-worldmap.jpg');
-                        url('https://findlocaltattooartists.com/assets/hero-gorilla-worldmap.jpg'); /* Replace with your hosted URL */
+                        url('assets/hero-gorilla-worldmap.jpg');
       background-size: cover;
       background-position: center 35%;
       background-attachment: fixed;
@@ -89,14 +88,12 @@
     function performSearch() {
       const query = document.getElementById('search-input').value.trim();
       if (query) {
-        // TODO: Replace with real search routing once backend is live
+        // TODO: Replace with real search once backend is ready
         window.location.href = `/search?q=${encodeURIComponent(query)}`;
       } else {
         alert("🔍 Please enter a city, zip, or style to search artists.");
       }
     }
-
-    // Tailwind script already included via CDN
   </script>
 </body>
 </html>
