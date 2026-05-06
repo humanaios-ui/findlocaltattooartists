@@ -8,10 +8,10 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     .hero {
-      background-image: linear-gradient(rgba(8, 8, 8, 0.78), rgba(8, 8, 8, 0.92)), 
-                        url('https://picsum.photos/id/1015/2000/1400');
+      background-image: linear-gradient(rgba(8, 8, 8, 0.75), rgba(8, 8, 8, 0.88)), 
+                        url('https://findlocaltattooartists.com/assets/hero-gorilla-worldmap.jpg'); /* Replace with your hosted URL */
       background-size: cover;
-      background-position: center 32%;
+      background-position: center 35%;
       background-attachment: fixed;
     }
     .headline {
@@ -22,7 +22,15 @@
       transition: all 0.3s ease;
     }
     .search-input:focus {
-      box-shadow: 0 0 0 4px rgba(159, 18, 57, 0.3);
+      box-shadow: 0 0 0 4px rgba(159, 18, 57, 0.4);
+      border-color: #9f1239;
+    }
+    .btn-search {
+      transition: all 0.2s ease;
+    }
+    .btn-search:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(159, 18, 57, 0.3);
     }
   </style>
 </head>
@@ -47,10 +55,10 @@
             type="text" 
             id="search-input"
             placeholder="Search by city, zip code, or style (e.g. Black & Grey Realism)" 
-            class="search-input flex-1 px-8 py-7 text-lg bg-white/10 border border-white/40 rounded-3xl focus:outline-none focus:border-[#9f1239] placeholder:text-white/60 text-white">
+            class="search-input flex-1 px-8 py-7 text-lg bg-white/10 border border-white/40 rounded-3xl focus:outline-none placeholder:text-white/60 text-white">
           <button 
             onclick="performSearch()" 
-            class="px-14 py-7 bg-[#9f1239] hover:bg-red-700 text-xl font-semibold rounded-3xl transition-all active:scale-95 whitespace-nowrap shadow-lg">
+            class="btn-search px-14 py-7 bg-[#9f1239] hover:bg-red-700 text-xl font-semibold rounded-3xl transition-all active:scale-95 whitespace-nowrap shadow-lg">
             Search Artists
           </button>
         </div>
@@ -70,7 +78,7 @@
       </div>
     </div>
 
-    <!-- Subtle scroll indicator -->
+    <!-- Scroll indicator -->
     <div class="absolute bottom-10 left-1/2 -translate-x-1/2 text-white/40 text-sm tracking-widest">
       SCROLL TO EXPLORE ↓
     </div>
@@ -80,4 +88,14 @@
     function performSearch() {
       const query = document.getElementById('search-input').value.trim();
       if (query) {
-        alert(`🔍 Searching for "${query}"
+        // TODO: Replace with real search routing once backend is live
+        window.location.href = `/search?q=${encodeURIComponent(query)}`;
+      } else {
+        alert("🔍 Please enter a city, zip, or style to search artists.");
+      }
+    }
+
+    // Tailwind script already included via CDN
+  </script>
+</body>
+</html>
