@@ -1,0 +1,9 @@
+---
+import { messageFor } from '../lib/messages';
+
+const error = messageFor(Astro.url.searchParams.get('error'));
+const notice = messageFor(Astro.url.searchParams.get('notice'));
+---
+
+{error && <p role="alert" class="rounded-2xl border border-ink bg-ink/20 px-4 py-3 text-sm">{error}</p>}
+{notice && <p role="status" class="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white/80">{notice}</p>}

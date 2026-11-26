@@ -1,6 +1,8 @@
 # build output
 dist/
 .astro/
+.vercel/
+.wrangler/
 
 # dependencies
 node_modules/
@@ -15,3 +17,6 @@ npm-debug.log*
 
 # OS
 .DS_Store
+
+# local demo state, if a file store is added later
+.data/

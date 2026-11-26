@@ -1,0 +1,35 @@
+---
+import ArtistCard from './ArtistCard.astro';
+import Base from '../layouts/Base.astro';
+import type { City } from '../lib/cities';
+import { getRepository } from '../lib/repository';
+import { siteConfig } from '../config/site';
+
+interface Props {
+  city: City;
+}
+
+const { city } = Astro.props;
+const repo = await getRepository(Astro.cookies.get('sb-access-token')?.value);
+const cards = await repo.cityListings(city.slug);
+const title = `Tattoo artists in ${city.name}, ${city.stateName}`;
+---
+
+<Base title={`${title} · ${siteConfig.brandName}`} description={`${title}. Browse published artists. Featured listings sort first.`}>
+  <main class="mx-auto max-w-5xl px-6 py-12">
+    <p class="mb-3 text-sm tracking-wide text-ink uppercase">{city.stateName}</p>
+    <h1 class="mb-4 text-4xl font-bold md:text-5xl">{title}</h1>
+    <p class="mb-10 max-w-2xl text-white/70">
+      Published artists only. Featured listings stay at the top. That pin is stored for sorting and is not for sale here.
+    </p>
+    {
+      cards.length === 0 ? (
+        <p>No published artists in {city.name} yet.</p>
+      ) : (
+        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {cards.map((card) => <ArtistCard card={card} />)}
+        </div>
+      )
+    }
+  </main>
+</Base>

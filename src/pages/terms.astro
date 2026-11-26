@@ -1,0 +1,31 @@
+---
+import Base from '../layouts/Base.astro';
+import { siteConfig } from '../config/site';
+---
+
+<Base title={`Terms · ${siteConfig.brandName}`} description="Draft terms for the two-city artist directory.">
+  <main class="mx-auto max-w-3xl px-6 py-12">
+    <p class="mb-4 inline-block rounded-full bg-ink px-3 py-1 text-sm font-semibold">DRAFT — not legal advice, not reviewed by counsel</p>
+    <h1 class="mb-6 text-4xl font-bold">Terms of use</h1>
+    <div class="space-y-4 leading-relaxed text-white/85">
+      <p>
+        This page is a placeholder so the site is not silent about the rules. A human has to review and replace it before it is treated as the real terms. {siteConfig.brandName} is a HumanAIOS-owned marketplace for tattoo artists in two cities only: Phoenix, Arizona and Fort Walton Beach, Florida. The public name and the canonical web address are not settled.
+      </p>
+      <p>
+        The site introduces guests to artists. It is not a tattoo studio, it does not employ the artists, and it is not a party to the tattoo. A booking on this site is a request. It becomes a plan only when the artist confirms it. Nothing on this site takes a payment, a deposit, or a hold on a card.
+      </p>
+      <p>
+        Artists and guests must be 18 or older. The sign-up form and the booking form record that acknowledgement. Artists must have the right to publish every portfolio image, including consent from the client when the work shows a person.
+      </p>
+      <p>
+        New listings stay unpublished to the public until a moderator approves them. A moderator can later hide or remove a listing or an image. There is no shop account and no customer account. Guests do not create a login.
+      </p>
+      <p>
+        The directory does not cover other cities, other countries, or a worldwide network. Searching for a place outside Phoenix and Fort Walton Beach returns no artists from those two cities.
+      </p>
+      <p>
+        Featured placement, if a listing shows it, is only a stored sort key in this version. It is not a product you can buy here.
+      </p>
+    </div>
+  </main>
+</Base>

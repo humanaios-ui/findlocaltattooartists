@@ -1,0 +1,36 @@
+---
+export const prerender = false;
+
+import Flash from '../../components/Flash.astro';
+import Turnstile from '../../components/Turnstile.astro';
+import Base from '../../layouts/Base.astro';
+import { siteConfig } from '../../config/site';
+
+if (Astro.locals.user) return Astro.redirect('/artist/dashboard');
+---
+
+<Base title={`Artist sign-up · ${siteConfig.brandName}`}>
+  <main class="mx-auto max-w-md px-6 py-16">
+    <h1 class="mb-6 text-4xl font-bold">Artist sign-up</h1>
+    <p class="mb-6 text-white/70">One listing, in Phoenix or Fort Walton Beach. You must be 18 or older.</p>
+    <Flash />
+    <form method="post" action="/api/auth/signup" class="mt-6 grid gap-4">
+      <label>Email
+        <input required type="email" name="email" autocomplete="username" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" />
+      </label>
+      <label>Password
+        <input required type="password" name="password" autocomplete="new-password" minlength="8" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" />
+      </label>
+      <label class="flex items-start gap-3">
+        <input required type="checkbox" name="age" class="mt-1" />
+        <span>I confirm I am 18 or older.</span>
+      </label>
+      <label class="flex items-start gap-3">
+        <input required type="checkbox" name="image_rights" class="mt-1" />
+        <span>I have the right to publish my portfolio images, including consent from the client for any tattoo of a person.</span>
+      </label>
+      <Turnstile />
+      <button class="rounded-full bg-ink px-5 py-3 font-semibold" type="submit">Create account</button>
+    </form>
+  </main>
+</Base>

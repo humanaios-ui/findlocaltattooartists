@@ -1,0 +1,93 @@
+---
+export const prerender = false;
+
+import Flash from '../../components/Flash.astro';
+import Base from '../../layouts/Base.astro';
+import { cityLabel } from '../../lib/cities';
+import { getRepository } from '../../lib/repository';
+import { siteConfig } from '../../config/site';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/admin/login');
+const allowed = user.role === 'admin';
+if (!allowed) Astro.response.status = 403;
+const queue = allowed ? await getRepository(Astro.cookies.get('sb-access-token')?.value).then((repo) => repo.moderationQueue()) : null;
+const button = 'rounded-full border border-white/20 px-3 py-1 text-sm';
+---
+
+<Base title={`Moderation · ${siteConfig.brandName}`}>
+  <main class="mx-auto max-w-5xl px-6 py-12">
+    {
+      !allowed || !queue ? (
+        <h1 class="text-4xl font-bold">You need an operator account.</h1>
+      ) : (
+        <div>
+          <h1 class="mb-2 text-4xl font-bold">Moderation</h1>
+          <p class="mb-6 max-w-2xl text-white/70">
+            New listings stay pending until you approve them. Featured is a stored sort key. It is not for sale in this version.
+          </p>
+          <Flash />
+          <h2 class="mt-8 mb-4 text-2xl font-semibold">Listings</h2>
+          <ul class="space-y-4">
+            {queue.listings.map((listing) => (
+              <li class="rounded-3xl border border-white/10 p-5">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <h3 class="text-xl font-semibold">{listing.displayName}</h3>
+                  <span class="text-sm text-ink">{listing.moderationStatus}{listing.featured ? ' · featured' : ''}</span>
+                </div>
+                <p class="mt-1 text-sm text-white/70">{cityLabel(listing.citySlug)} · {listing.email} · {listing.imageCount} images</p>
+                <form method="post" action="/api/moderation" class="mt-4 flex flex-wrap gap-2">
+                  <input type="hidden" name="kind" value="listing" />
+                  <input type="hidden" name="id" value={listing.id} />
+                  <button class={button} name="action" value="approve" type="submit">Approve</button>
+                  <button class={button} name="action" value="hide" type="submit">Hide</button>
+                  <button class={button} name="action" value="remove" type="submit">Remove</button>
+                  <button class={button} name="action" value={listing.featured ? 'unfeature' : 'feature'} type="submit">
+                    {listing.featured ? 'Clear featured' : 'Pin as featured'}
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+          <h2 class="mt-10 mb-4 text-2xl font-semibold">Images</h2>
+          <ul class="grid gap-4 sm:grid-cols-2">
+            {queue.images.map((image) => (
+              <li class="rounded-3xl border border-white/10 p-4">
+                {image.url ? <img src={image.url} alt={image.alt} width="800" height="1000" loading="lazy" decoding="async" class="aspect-[4/5] w-full rounded-2xl object-cover" /> : <p class="text-sm text-white/50">No public image URL until this file is approved.</p>}
+                <p class="mt-3 text-sm">{image.artistName} · {image.moderationStatus} · {image.tag}</p>
+                <form method="post" action="/api/moderation" class="mt-3 flex flex-wrap gap-2">
+                  <input type="hidden" name="kind" value="image" />
+                  <input type="hidden" name="id" value={image.id} />
+                  <button class={button} name="action" value="approve" type="submit">Approve</button>
+                  <button class={button} name="action" value="hide" type="submit">Hide</button>
+                  <button class={button} name="action" value="remove" type="submit">Remove</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+          <h2 class="mt-10 mb-4 text-2xl font-semibold">Reports</h2>
+          {
+            queue.reports.length === 0 ? (
+              <p class="text-white/60">No open reports.</p>
+            ) : (
+              <ul class="space-y-4">
+                {queue.reports.map((report) => (
+                  <li class="rounded-3xl border border-white/10 p-5">
+                    <p class="font-semibold">{report.artistName}</p>
+                    <p class="mt-2 whitespace-pre-wrap text-white/80">{report.reason}</p>
+                    <p class="mt-2 text-sm text-white/50">{report.reporterEmail || 'No email'} · {report.createdAt}</p>
+                    <form method="post" action="/api/moderation" class="mt-3">
+                      <input type="hidden" name="kind" value="report" />
+                      <input type="hidden" name="id" value={report.id} />
+                      <button class={button} name="action" value="resolve" type="submit">Mark resolved</button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+        </div>
+      )
+    }
+  </main>
+</Base>

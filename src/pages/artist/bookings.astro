@@ -1,0 +1,70 @@
+---
+export const prerender = false;
+
+import Flash from '../../components/Flash.astro';
+import Base from '../../layouts/Base.astro';
+import { getRepository } from '../../lib/repository';
+import { siteConfig } from '../../config/site';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/artist/login?next=/artist/bookings');
+if (user.role !== 'artist') return Astro.redirect('/admin');
+const repo = await getRepository(Astro.cookies.get('sb-access-token')?.value);
+const bookings = await repo.artistBookings(user);
+const field = 'mt-1 w-full rounded-2xl border border-white/20 bg-black px-3 py-2';
+---
+
+<Base title={`Requests · ${siteConfig.brandName}`}>
+  <main class="mx-auto max-w-3xl px-6 py-12">
+    <h1 class="mb-6 text-4xl font-bold">Booking requests</h1>
+    <Flash />
+    {
+      bookings.length === 0 ? (
+        <p class="mt-6 text-white/70">No requests yet.</p>
+      ) : (
+        <ul class="mt-6 space-y-6">
+          {bookings.map((booking) => (
+            <li class="rounded-3xl border border-white/10 p-5">
+              <p class="text-sm tracking-wide text-ink uppercase">{booking.status}</p>
+              <h2 class="mt-1 text-2xl font-semibold">{booking.guestName}</h2>
+              <p class="mt-2 text-white/80">{booking.guestEmail} · {booking.guestPhone}</p>
+              <p class="mt-2">Preferred city: {booking.preferredCity === 'phoenix' ? 'Phoenix' : 'Fort Walton Beach'}</p>
+              <p class="mt-2">Dates: {booking.preferredDates}</p>
+              <p class="mt-2 whitespace-pre-wrap text-white/80">{booking.notes}</p>
+              {booking.proposedTime && <p class="mt-2">Proposed time: {booking.proposedTime}</p>}
+              {
+                booking.status === 'requested' && (
+                  <div class="mt-4 flex flex-wrap gap-3">
+                    <form method="post" action="/api/bookings/decide">
+                      <input type="hidden" name="booking_id" value={booking.id} />
+                      <button class="rounded-full bg-ink px-4 py-2" name="action" value="confirm" type="submit">Confirm</button>
+                    </form>
+                    <form method="post" action="/api/bookings/decide">
+                      <input type="hidden" name="booking_id" value={booking.id} />
+                      <button class="rounded-full border border-white/20 px-4 py-2" name="action" value="decline" type="submit">Decline</button>
+                    </form>
+                    <form method="post" action="/api/bookings/decide" class="flex flex-wrap items-end gap-2">
+                      <input type="hidden" name="booking_id" value={booking.id} />
+                      <label class="text-sm">Another time
+                        <input name="proposed_time" required class={field} />
+                      </label>
+                      <button class="rounded-full border border-white/20 px-4 py-2" name="action" value="propose" type="submit">Propose</button>
+                    </form>
+                  </div>
+                )
+              }
+              {
+                (booking.status === 'requested' || booking.status === 'confirmed') && (
+                  <form method="post" action="/api/bookings/decide" class="mt-3">
+                    <input type="hidden" name="booking_id" value={booking.id} />
+                    <button class="text-sm text-white/60 underline" name="action" value="cancel" type="submit">Cancel</button>
+                  </form>
+                )
+              }
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </main>
+</Base>

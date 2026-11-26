@@ -26,4 +26,35 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      - run: npm test
+      - run: npm audit --audit-level=moderate
       - run: npm run build
+
+  rls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: flta
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+        env:
+          DATABASE_URL: postgres://postgres@localhost:5432/flta

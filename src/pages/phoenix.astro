@@ -1,0 +1,11 @@
+---
+export const prerender = false;
+
+import CityIndex from '../components/CityIndex.astro';
+import { cityBySlug } from '../lib/cities';
+
+const city = cityBySlug('phoenix');
+if (!city) throw new Error('Phoenix is missing from the city list.');
+---
+
+<CityIndex city={city} />

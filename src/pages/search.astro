@@ -1,33 +1,89 @@
 ---
+export const prerender = false;
+
+import ArtistCard from '../components/ArtistCard.astro';
+import Flash from '../components/Flash.astro';
 import Base from '../layouts/Base.astro';
-import { CITIES } from '../lib/cities';
+import { CITIES, cityPath } from '../lib/cities';
+import { getRepository } from '../lib/repository';
+import { siteConfig } from '../config/site';
+import { STYLES } from '../lib/styles';
+
+const q = Astro.url.searchParams.get('q');
+const city = Astro.url.searchParams.get('city');
+const style = Astro.url.searchParams.get('style');
+const repo = await getRepository(Astro.cookies.get('sb-access-token')?.value);
+const outcome = await repo.search({ q, city, style });
+const title = outcome.kind === 'results' && outcome.city
+  ? `Search · ${outcome.city === 'phoenix' ? 'Phoenix' : 'Fort Walton Beach'}`
+  : 'Search';
 ---
 
-<Base title="Search · Poco Loco’s Local Tattoo Artists">
-  <main class="mx-auto flex min-h-screen max-w-2xl flex-col justify-center px-6 text-center">
-    <h1 class="mb-6 text-4xl font-bold text-ink">Search is coming soon</h1>
-    <p id="query-echo" class="mb-4 text-lg text-white/80" hidden>
-      You searched for “<span id="query-text"></span>”.
-    </p>
-    <p class="mb-10 text-lg text-white/80">
-      Artist listings are not live yet. We are starting with two cities:
-    </p>
-    <ul class="mb-12 space-y-2 text-xl">
-      {CITIES.map((c) => <li>{c.name}, {c.state}</li>)}
-    </ul>
-    <a href="/" class="text-ink underline hover:text-red-400">Back to home</a>
+<Base title={`${title} · ${siteConfig.brandName}`} description="Search tattoo artists in Phoenix, AZ and Fort Walton Beach, FL.">
+  <main class="mx-auto max-w-5xl px-6 py-12">
+    <h1 class="mb-6 text-4xl font-bold">Search artists</h1>
+    <Flash />
+    <form action="/search" method="get" class="mb-10 grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-5 md:grid-cols-4" role="search">
+      <label class="md:col-span-2">City, ZIP, name, or style
+        <input class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" type="search" name="q" value={q ?? ''} />
+      </label>
+      <label>City
+        <select class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" name="city">
+          <option value="">Either city</option>
+          {CITIES.map((item) => <option value={item.slug} selected={city === item.slug}>{item.name}</option>)}
+        </select>
+      </label>
+      <label>Style
+        <select class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" name="style">
+          <option value="">Any style</option>
+          {STYLES.map((item) => <option value={item.slug} selected={style === item.slug}>{item.name}</option>)}
+        </select>
+      </label>
+      <button class="rounded-full bg-ink px-5 py-3 font-semibold md:col-span-4 md:w-fit" type="submit">Search</button>
+    </form>
+
+    {
+      outcome.kind === 'picker' && (
+        <div>
+          <h2 class="mb-4 text-2xl">Choose a city</h2>
+          <p class="mb-6 text-white/70">Search is limited to two cities. Leave the box empty and pick one.</p>
+          <div class="grid gap-4 md:grid-cols-2">
+            {CITIES.map((item) => (
+              <a class="rounded-3xl border border-white/10 p-6 text-2xl hover:border-ink" href={cityPath(item.slug)}>
+                {item.name}, {item.state}
+              </a>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    {
+      outcome.kind === 'blocked' && (
+        <p class="text-lg">
+          We don’t list {outcome.place}. This directory is only Phoenix, AZ and Fort Walton Beach, FL.
+        </p>
+      )
+    }
+    {
+      outcome.kind === 'results' && (
+        <div>
+          <p class="mb-6 text-white/70">
+            {outcome.results.length} artist{outcome.results.length === 1 ? '' : 's'}
+            {outcome.city ? ` in ${outcome.city === 'phoenix' ? 'Phoenix, AZ' : 'Fort Walton Beach, FL'}` : ''}
+            {outcome.styleName ? ` · ${outcome.styleName}` : ''}
+            {outcome.text ? ` · “${outcome.text}”` : ''}
+          </p>
+          {
+            outcome.results.length === 0 ? (
+              <p>No published artists matched. Try one of the city pages.</p>
+            ) : (
+              <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {outcome.results.map((card) => <ArtistCard card={card} />)}
+              </div>
+            )
+          }
+        </div>
+      )
+    }
   </main>
 </Base>
-
-<script>
-  // Static page: read the query on the client. textContent keeps it inert.
-  const q = new URLSearchParams(window.location.search).get('q')?.trim();
-  if (q) {
-    const echo = document.getElementById('query-echo');
-    const text = document.getElementById('query-text');
-    if (echo && text) {
-      text.textContent = q.slice(0, 100);
-      echo.hidden = false;
-    }
-  }
-</script>
