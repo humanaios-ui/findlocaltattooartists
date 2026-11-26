@@ -12,6 +12,7 @@ describeIf("postgres row level security", () => {
     try {
       await client.query(readFileSync("supabase/tests/stubs.sql", "utf8"));
       await client.query(readFileSync("supabase/migrations/20261126120000_init.sql", "utf8"));
+      await client.query(readFileSync("supabase/migrations/20261126235500_harden_function_grants.sql", "utf8"));
 
       const artistA = "00000000-0000-4000-8000-0000000000a1";
       const artistB = "00000000-0000-4000-8000-0000000000b1";
