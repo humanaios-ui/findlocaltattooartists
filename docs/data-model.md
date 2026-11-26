@@ -16,6 +16,8 @@ Two cities only: Phoenix, AZ and Fort Walton Beach, FL. A listing’s `city_slug
 
 New listings and new images default to `pending`. A public page or search result requires `published` and `moderation_status = 'approved'`. Hidden and removed listings are not public. Approving a listing also approves its pending images. Later uploads stay pending until an image is approved on its own.
 
+Changing a public field on an approved listing (name, bio, city, shop, phone, hours, contact, ZIP, or styles) sets `moderation_status` back to `pending` unless the editor is an admin. The portfolio bucket is private. Public pages receive a 10-minute signed URL only for an approved image on a public listing. Removing an image, or removing the listing, deletes the stored object.
+
 A requested booking older than 14 days becomes `expired` the next time it is read. There is no payment, calendar, or instant book.
 
 ## Row-level security

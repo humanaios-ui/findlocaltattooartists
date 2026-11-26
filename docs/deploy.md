@@ -16,7 +16,7 @@ The canonical domain is not chosen. This file does not change DNS, GitHub Pages,
 
 Pages are static unless they export `prerender = false`. The home page, terms, and privacy are static. Search, city pages, profiles, artist pages, bookings, and moderation render on each request so a moderator’s decision shows up without another build.
 
-Form posts check that the browser `Origin` host matches the `Host` header. Astro’s built-in origin check is off, because it rewrites the request URL to localhost unless every preview hostname is listed in advance.
+Form posts require a same-origin browser signal. Astro’s own origin check stays off. `security.allowedDomains` lists the canonical host from `src/config/site.ts`, plus `PUBLIC_SITE_URL` when that is set at build time, and localhost. On those hosts the Node adapter trusts `X-Forwarded-For`, so booking and sign-up limits are per visitor instead of one shared proxy address. The in-memory limiter is still per server process. Set Turnstile when more than one process is serving the site. A preview hostname that is not in that list keeps the proxy address until it is added.
 
 Local preview after a node build:
 

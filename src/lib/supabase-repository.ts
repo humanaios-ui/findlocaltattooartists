@@ -1,3 +1,4 @@
+import { resolveSiteUrl } from "../config/site";
 import { cityLabel, isCitySlug, type CitySlug } from "./cities";
 import { applyArtistAction, applyGuestCancel, expireBooking } from "./booking";
 import { AppError } from "./errors";
@@ -5,6 +6,7 @@ import { validateImageMeta, validatePortfolioUpload } from "./images";
 import {
   isEmail,
   nextModeration,
+  sameStyleSet,
   requireAcknowledgements,
   requireBookingAge,
   slugifyName,
@@ -107,17 +109,20 @@ export function createSupabaseRepository(
     return createSupabase(config.url, config.anonKey, accessToken);
   };
 
-  function imageUrl(path: string): string {
-    return `${config.url.replace(/\/$/, "")}/storage/v1/object/public/portfolio/${path}`;
+  async function signedUrl(path: string): Promise<string> {
+    const signed = await service.storage.from("portfolio").createSignedUrl(path, 600);
+    if (signed.error || !signed.data?.signedUrl) return "";
+    return signed.data.signedUrl;
   }
 
-  function mapImage(row: ImageRow): PortfolioImageRecord {
+  async function mapImage(row: ImageRow, sign: boolean): Promise<PortfolioImageRecord> {
+    const url = sign && row.storage_path ? await signedUrl(row.storage_path) : "";
     return {
       id: row.id,
       listingId: "",
       alt: row.alt_text,
       tag: row.tag,
-      url: imageUrl(row.storage_path),
+      url,
       bytes: row.byte_size,
       moderationStatus: row.moderation_status,
       rightsAcknowledgedAt: row.rights_acknowledged_at,
@@ -149,7 +154,7 @@ export function createSupabaseRepository(
     };
   }
 
-  function toSearchRecord(row: ListingRow): SearchRecord | null {
+  async function toSearchRecord(row: ListingRow): Promise<SearchRecord | null> {
     const listing = mapListing(row);
     if (!listing) return null;
     const photo = (row.portfolio_images ?? [])
@@ -167,7 +172,7 @@ export function createSupabaseRepository(
       featured: listing.featured,
       featuredUntil: listing.featuredUntil,
       updatedAt: listing.updatedAt,
-      photoUrl: photo ? imageUrl(photo.storage_path) : null,
+      photoUrl: photo ? await signedUrl(photo.storage_path) : null,
       photoAlt: photo?.alt_text ?? null,
     };
   }
@@ -227,16 +232,14 @@ export function createSupabaseRepository(
 
     async search(input, now) {
       const rows = await loadRows();
-      return runSearch(rows.map(toSearchRecord).filter((row): row is SearchRecord => row !== null), input, now);
+      const records = (await Promise.all(rows.map((row) => toSearchRecord(row)))).filter((row): row is SearchRecord => row !== null);
+      return runSearch(records, input, now);
     },
 
     async cityListings(city, now) {
       const rows = await loadRows();
-      return queryRecords(
-        rows.map(toSearchRecord).filter((row): row is SearchRecord => row !== null),
-        { city, styleSlug: null, text: null },
-        now ?? new Date(),
-      );
+      const records = (await Promise.all(rows.map((row) => toSearchRecord(row)))).filter((row): row is SearchRecord => row !== null);
+      return queryRecords(records, { city, styleSlug: null, text: null }, now ?? new Date());
     },
 
     async publicProfile(slug, now): Promise<PublicProfile | null> {
@@ -246,10 +249,12 @@ export function createSupabaseRepository(
       const row = data as ListingRow;
       const listing = mapListing(row);
       if (!listing || !isPublicRecord(listing)) return null;
-      const images = (row.portfolio_images ?? [])
-        .filter((image) => image.moderation_status === "approved")
-        .sort((a, b) => a.created_at.localeCompare(b.created_at))
-        .map((image) => ({ ...mapImage(image), listingId: listing.id }));
+      const images = await Promise.all(
+        (row.portfolio_images ?? [])
+          .filter((image) => image.moderation_status === "approved")
+          .sort((a, b) => a.created_at.localeCompare(b.created_at))
+          .map(async (image) => ({ ...(await mapImage(image, true)), listingId: listing.id })),
+      );
       return {
         listing,
         images,
@@ -264,7 +269,11 @@ export function createSupabaseRepository(
       const email = input.email.trim().toLowerCase();
       if (!isEmail(email)) throw new AppError("email");
       validatePassword(input.password);
-      const created = await service.auth.admin.createUser({ email, password: input.password, email_confirm: true });
+      const created = await anon().auth.signUp({
+        email,
+        password: input.password,
+        options: { emailRedirectTo: `${resolveSiteUrl({ PUBLIC_SITE_URL: process.env.PUBLIC_SITE_URL })}/artist/login` },
+      });
       dbError(created.error);
       const userId = created.data.user?.id;
       if (!userId) throw new AppError("server");
@@ -278,12 +287,13 @@ export function createSupabaseRepository(
         image_rights_acknowledged_at: stamp,
       }).select("id").single();
       dbError(artistInsert.error);
-      const signed = await anon().auth.signInWithPassword({ email, password: input.password });
-      dbError(signed.error, "credentials");
-      const session = signed.data.session;
-      if (!session) throw new AppError("credentials");
+      const artistId = String(required(artistInsert.data).id);
+      const session = created.data.session;
+      if (!session) {
+        return { user: { id: userId, email, role: "artist", artistId }, tokens: null, confirmEmail: true };
+      }
       return {
-        user: { id: userId, email, role: "artist", artistId: String(required(artistInsert.data).id) },
+        user: { id: userId, email, role: "artist", artistId },
         tokens: { accessToken: session.access_token, refreshToken: session.refresh_token },
       };
     },
@@ -318,7 +328,14 @@ export function createSupabaseRepository(
       const row = await ownListing(user);
       const listing = row ? mapListing(row) : null;
       const images = row
-        ? (row.portfolio_images ?? []).map((image) => ({ ...mapImage(image), listingId: row.id }))
+        ? await Promise.all(
+          (row.portfolio_images ?? [])
+            .filter((image) => image.moderation_status !== "removed")
+            .map(async (image) => ({
+              ...(await mapImage(image, image.moderation_status === "approved")),
+              listingId: row.id,
+            })),
+        )
         : [];
       let requestedCount = 0;
       if (user.artistId) {
@@ -370,13 +387,16 @@ export function createSupabaseRepository(
         dbError(updated.error);
       }
       if (!listingId) throw new AppError("server");
-      const cleared = await client.from("listing_styles").delete().eq("listing_id", listingId);
-      dbError(cleared.error);
-      if (value.styleSlugs.length) {
-        const styled = await client.from("listing_styles").insert(
-          value.styleSlugs.map((style) => ({ listing_id: listingId, style_slug: style })),
-        );
-        dbError(styled.error);
+      const currentStyles = (existing?.listing_styles ?? []).map((style) => style.style_slug);
+      if (!existing || !sameStyleSet(currentStyles, value.styleSlugs)) {
+        const cleared = await client.from("listing_styles").delete().eq("listing_id", listingId);
+        dbError(cleared.error);
+        if (value.styleSlugs.length) {
+          const styled = await client.from("listing_styles").insert(
+            value.styleSlugs.map((style) => ({ listing_id: listingId, style_slug: style })),
+          );
+          dbError(styled.error);
+        }
       }
       const fresh = await ownListing(user);
       const mapped = fresh ? mapListing(fresh) : null;
@@ -414,7 +434,7 @@ export function createSupabaseRepository(
         await service.storage.from("portfolio").remove([path]);
         dbError(inserted.error, "image");
       }
-      return { ...mapImage(inserted.data as ImageRow), listingId: listing.id };
+      return { ...(await mapImage(inserted.data as ImageRow, false)), listingId: listing.id };
     },
 
     async deleteImage(user, imageId) {
@@ -423,7 +443,8 @@ export function createSupabaseRepository(
       if (!listing || !image) throw new AppError("not-found");
       const removed = await userClient().from("portfolio_images").delete().eq("id", imageId);
       dbError(removed.error);
-      await service.storage.from("portfolio").remove([image.storage_path]);
+      const stored = await service.storage.from("portfolio").remove([image.storage_path]);
+      dbError(stored.error, "image");
     },
 
     async createBooking(input: BookingInput) {
@@ -576,17 +597,19 @@ export function createSupabaseRepository(
         listings ( display_name, slug )
       `);
       dbError(imageError);
-      const images = ((imageRows ?? []) as Array<ImageRow & { listing_id: string; listings?: { display_name: string; slug: string } | { display_name: string; slug: string }[] | null }>)
-        .filter((row) => row.moderation_status !== "removed")
-        .map((row) => {
-          const parent = Array.isArray(row.listings) ? row.listings[0] : row.listings;
-          return {
-            ...mapImage(row),
-            listingId: row.listing_id,
-            artistName: parent?.display_name ?? "Artist",
-            listingSlug: parent?.slug ?? "",
-          };
-        });
+      const images = await Promise.all(
+        ((imageRows ?? []) as Array<ImageRow & { listing_id: string; listings?: { display_name: string; slug: string } | { display_name: string; slug: string }[] | null }>)
+          .filter((row) => row.moderation_status !== "removed")
+          .map(async (row) => {
+            const parent = Array.isArray(row.listings) ? row.listings[0] : row.listings;
+            return {
+              ...(await mapImage(row, row.moderation_status === "approved")),
+              listingId: row.listing_id,
+              artistName: parent?.display_name ?? "Artist",
+              listingSlug: parent?.slug ?? "",
+            };
+          }),
+      );
       const { data: reports, error: reportError } = await client.from("reports").select("*").is("resolved_at", null);
       dbError(reportError);
       return {
@@ -620,13 +643,29 @@ export function createSupabaseRepository(
           .eq("moderation_status", "pending");
         dbError(images.error);
       }
+      if (status === "removed") {
+        const files = await service.from("portfolio_images").select("storage_path").eq("listing_id", listingId);
+        dbError(files.error);
+        const paths = ((files.data ?? []) as { storage_path: string }[]).map((row) => row.storage_path).filter(Boolean);
+        if (paths.length) {
+          const removed = await service.storage.from("portfolio").remove(paths);
+          dbError(removed.error, "image");
+        }
+      }
     },
 
     async moderateImage(imageId, action) {
+      const status = nextModeration(action);
+      const existing = await service.from("portfolio_images").select("storage_path").eq("id", imageId).maybeSingle();
+      dbError(existing.error);
       const updated = await userClient().from("portfolio_images").update({
-        moderation_status: nextModeration(action),
+        moderation_status: status,
       }).eq("id", imageId);
       dbError(updated.error);
+      if (status === "removed" && existing.data?.storage_path) {
+        const removed = await service.storage.from("portfolio").remove([String(existing.data.storage_path)]);
+        dbError(removed.error, "image");
+      }
     },
 
     async setFeatured(listingId, featured, now = new Date()) {

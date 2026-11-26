@@ -1,7 +1,7 @@
 import { cityForZip, isCitySlug, type CitySlug } from "./cities";
 import { AppError } from "./errors";
 import { isStyleSlug } from "./styles";
-import type { ContactPreference, ListingInput, ModerationStatus, ModerateAction } from "./types";
+import type { ContactPreference, ListingInput, ListingRecord, ModerationStatus, ModerateAction } from "./types";
 
 const CONTACT: ContactPreference[] = ["email", "phone", "either"];
 
@@ -75,6 +75,25 @@ export function validateListingInput(raw: ListingInput): ListingInput {
     styleSlugs,
     published: raw.published,
   };
+}
+
+export function sameStyleSet(left: string[], right: string[]): boolean {
+  return [...left].sort().join("\0") === [...right].sort().join("\0");
+}
+
+/** An approved listing goes back to review when a public field changes. */
+export function listingNeedsReview(before: ListingRecord, next: ListingInput): boolean {
+  if (before.moderationStatus !== "approved") return false;
+  const sameStyles = sameStyleSet(before.styleSlugs, next.styleSlugs);
+  return !sameStyles
+    || before.displayName !== next.displayName
+    || before.citySlug !== next.citySlug
+    || (before.shopName ?? "") !== next.shopName
+    || before.bio !== next.bio
+    || before.hours !== next.hours
+    || before.contactPreference !== next.contactPreference
+    || (before.phone ?? "") !== next.phone
+    || (before.zip ?? "") !== next.zip;
 }
 
 export function nextModeration(action: ModerateAction): ModerationStatus {

@@ -8,6 +8,7 @@ export interface ServerEnv {
   POSTMARK_SERVER_TOKEN?: string;
   EMAIL_FROM?: string;
   FLTA_DEMO?: string;
+  TURNSTILE_SECRET_KEY?: string;
 }
 
 export type DataMode =
@@ -27,6 +28,7 @@ export function readEnv(): ServerEnv {
     POSTMARK_SERVER_TOKEN: process.env.POSTMARK_SERVER_TOKEN,
     EMAIL_FROM: process.env.EMAIL_FROM,
     FLTA_DEMO: process.env.FLTA_DEMO,
+    TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
   };
 }
 

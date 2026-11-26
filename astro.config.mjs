@@ -6,6 +6,26 @@ import { siteConfig } from './src/config/site.ts';
 
 const target = process.env.DEPLOY_TARGET ?? 'node';
 
+/** @param {string | undefined} value */
+function hostnameOf(value) {
+  if (!value) return '';
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return '';
+  }
+}
+
+// Hosts whose forwarded client IP Astro may trust. Without this, a Node
+// process behind a proxy reports the proxy address for every visitor, and
+// the booking limit becomes one shared bucket.
+const allowedHostnames = [
+  hostnameOf(siteConfig.siteUrl),
+  hostnameOf(process.env.PUBLIC_SITE_URL),
+  'localhost',
+  '127.0.0.1',
+].filter(Boolean);
+
 /** @param {string} name */
 async function adapterFor(name) {
   if (name === 'cloudflare') {
@@ -31,7 +51,10 @@ export default defineConfig({
   session: false,
   // Astro's origin check rebuilds the request URL as localhost unless every
   // preview host is listed. Routes compare Origin to the Host header instead.
-  security: { checkOrigin: false },
+  security: {
+    checkOrigin: false,
+    allowedDomains: [...new Set(allowedHostnames)].map((hostname) => ({ hostname })),
+  },
   adapter: await adapterFor(target),
   vite: {
     plugins: [tailwindcss()],

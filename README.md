@@ -59,6 +59,8 @@ Do not load fictional artists into that database. `supabase/seed.sql` intentiona
 
 For mail, set `EMAIL_FROM` and either `RESEND_API_KEY` or `POSTMARK_SERVER_TOKEN`. The from-address has to be verified with that provider. With neither key, messages are logged.
 
+Supabase sign-up uses email confirmation. If the project requires it, the artist confirms the address before the session exists. Turnstile is optional: set `PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` to require it on sign-up, booking, and reports.
+
 ## Scripts
 
 ```bash

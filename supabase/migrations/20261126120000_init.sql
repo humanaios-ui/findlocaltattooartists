@@ -285,8 +285,24 @@ begin
     end if;
     return new;
   end if;
+  if old.moderation_status = 'approved' and (
+    new.display_name is distinct from old.display_name
+    or new.bio is distinct from old.bio
+    or new.city_slug is distinct from old.city_slug
+    or new.shop_name is distinct from old.shop_name
+    or new.phone is distinct from old.phone
+    or new.hours is distinct from old.hours
+    or new.contact_preference is distinct from old.contact_preference
+    or new.zip is distinct from old.zip
+  ) then
+    new.moderation_status := 'pending';
+  end if;
   if new.moderation_status is distinct from old.moderation_status
-     or new.featured is distinct from old.featured
+     and not (old.moderation_status = 'approved' and new.moderation_status = 'pending')
+  then
+    raise exception 'artists cannot change moderation, featured, or slug';
+  end if;
+  if new.featured is distinct from old.featured
      or new.featured_until is distinct from old.featured_until
      or new.artist_id is distinct from old.artist_id
      or new.slug is distinct from old.slug
@@ -299,6 +315,31 @@ $$;
 
 create trigger listings_protect before insert or update on public.listings
 for each row execute function public.protect_listing();
+
+create or replace function public.requeue_listing_on_style_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target uuid := coalesce(new.listing_id, old.listing_id);
+begin
+  if not public.is_admin() then
+    update public.listings
+    set moderation_status = 'pending'
+    where id = target and moderation_status = 'approved';
+  end if;
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger listing_styles_requeue
+after insert or update or delete on public.listing_styles
+for each row execute function public.requeue_listing_on_style_change();
 
 create or replace function public.enforce_listing_zip()
 returns trigger
@@ -593,16 +634,15 @@ grant select, update on public.booking_requests to authenticated;
 grant select, update on public.reports to authenticated;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('portfolio', 'portfolio', true, 1572864, array['image/webp'])
+values ('portfolio', 'portfolio', false, 1572864, array['image/webp'])
 on conflict (id) do update
 set public = excluded.public,
     file_size_limit = excluded.file_size_limit,
     allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists portfolio_public_read on storage.objects;
-create policy portfolio_public_read on storage.objects
-  for select to anon, authenticated
-  using (bucket_id = 'portfolio');
+-- Private bucket. Approved images are handed out as short-lived signed URLs.
+-- Anon cannot list or read objects. Moderator remove deletes the object.
 
 drop policy if exists portfolio_artist_insert on storage.objects;
 create policy portfolio_artist_insert on storage.objects

@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import Flash from '../../components/Flash.astro';
+import Turnstile from '../../components/Turnstile.astro';
 import PortfolioGallery from '../../components/PortfolioGallery.astro';
 import Base from '../../layouts/Base.astro';
 import { CITIES } from '../../lib/cities';
@@ -67,6 +68,7 @@ const title = profile ? `${profile.listing.displayName} · ${profile.cityLabel}`
                 <input required type="checkbox" name="age" class="mt-1" />
                 <span>I confirm I am 18 or older and I want this artist to receive my request.</span>
               </label>
+              <Turnstile />
               <button class="w-fit rounded-full bg-ink px-6 py-3 font-semibold" type="submit">Book</button>
             </form>
           </section>
@@ -80,6 +82,7 @@ const title = profile ? `${profile.listing.displayName} · ${profile.cityLabel}`
               <label>What should a moderator look at?
                 <textarea required minlength="10" name="reason" rows="4" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3"></textarea>
               </label>
+              <Turnstile />
               <button class="w-fit rounded-full border border-white/20 px-4 py-2" type="submit">Send report</button>
             </form>
           </details>
