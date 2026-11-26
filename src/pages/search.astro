@@ -1,0 +1,33 @@
+---
+import Base from '../layouts/Base.astro';
+import { CITIES } from '../lib/cities';
+---
+
+<Base title="Search · Poco Loco’s Local Tattoo Artists">
+  <main class="mx-auto flex min-h-screen max-w-2xl flex-col justify-center px-6 text-center">
+    <h1 class="mb-6 text-4xl font-bold text-ink">Search is coming soon</h1>
+    <p id="query-echo" class="mb-4 text-lg text-white/80" hidden>
+      You searched for “<span id="query-text"></span>”.
+    </p>
+    <p class="mb-10 text-lg text-white/80">
+      Artist listings are not live yet. We are starting with two cities:
+    </p>
+    <ul class="mb-12 space-y-2 text-xl">
+      {CITIES.map((c) => <li>{c.name}, {c.state}</li>)}
+    </ul>
+    <a href="/" class="text-ink underline hover:text-red-400">Back to home</a>
+  </main>
+</Base>
+
+<script>
+  // Static page: read the query on the client. textContent keeps it inert.
+  const q = new URLSearchParams(window.location.search).get('q')?.trim();
+  if (q) {
+    const echo = document.getElementById('query-echo');
+    const text = document.getElementById('query-text');
+    if (echo && text) {
+      text.textContent = q.slice(0, 100);
+      echo.hidden = false;
+    }
+  }
+</script>

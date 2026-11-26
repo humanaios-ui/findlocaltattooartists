@@ -1,0 +1,84 @@
+---
+import { getImage } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import heroSource from '../assets/hero.png';
+import { CITIES } from '../lib/cities';
+
+// Re-encode the 1 MB PNG hero as WebP at build time.
+const hero = await getImage({ src: heroSource, format: 'webp' });
+const cityList = CITIES.map((c) => `${c.name}, ${c.state}`).join(' and ');
+---
+
+<Base title="Poco Loco’s Local Tattoo Artists">
+  <main
+    class="hero relative flex min-h-screen items-center justify-center"
+    style={`--hero-url: url('${hero.src}')`}
+  >
+    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-black/40 to-black/90"></div>
+
+    <div class="relative z-10 mx-auto max-w-5xl px-6 text-center">
+      <h1 class="headline mb-6 text-6xl leading-none font-bold tracking-tighter text-ink md:text-7xl">
+        Poco Loco’s Local Tattoo Artists
+      </h1>
+
+      <p class="mx-auto mb-12 max-w-3xl text-2xl font-light text-white/90 md:text-3xl">
+        Find tattoo artists in {cityList}
+      </p>
+
+      <form action="/search" method="get" class="mx-auto mb-16 max-w-2xl" role="search">
+        <div class="flex flex-col gap-4 px-2 sm:flex-row">
+          <label for="search-input" class="sr-only">Search artists</label>
+          <input
+            type="search"
+            id="search-input"
+            name="q"
+            required
+            placeholder="Search by city or style (e.g. Black & Grey Realism)"
+            class="search-input flex-1 rounded-3xl border border-white/40 bg-white/10 px-8 py-7 text-lg text-white placeholder:text-white/60 focus:outline-none"
+          />
+          <button
+            type="submit"
+            class="btn-search rounded-3xl bg-ink px-14 py-7 text-xl font-semibold whitespace-nowrap shadow-lg transition-all hover:bg-red-700 active:scale-95"
+          >
+            Search Artists
+          </button>
+        </div>
+      </form>
+
+      <p class="text-lg font-medium text-white/60">Artist sign-up is coming soon.</p>
+    </div>
+
+    <div class="absolute bottom-10 left-1/2 -translate-x-1/2 text-sm tracking-widest text-white/40">
+      SCROLL TO EXPLORE ↓
+    </div>
+  </main>
+</Base>
+
+<style>
+  .hero {
+    background-image:
+      linear-gradient(rgba(8, 8, 8, 0.75), rgba(8, 8, 8, 0.88)),
+      var(--hero-url);
+    background-size: cover;
+    background-position: center 35%;
+    background-attachment: fixed;
+  }
+  .headline {
+    text-shadow: 0 8px 40px rgba(0, 0, 0, 0.95);
+    letter-spacing: -0.06em;
+  }
+  .search-input {
+    transition: all 0.3s ease;
+  }
+  .search-input:focus {
+    box-shadow: 0 0 0 4px rgba(159, 18, 57, 0.4);
+    border-color: #9f1239;
+  }
+  .btn-search {
+    transition: all 0.2s ease;
+  }
+  .btn-search:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(159, 18, 57, 0.3);
+  }
+</style>
