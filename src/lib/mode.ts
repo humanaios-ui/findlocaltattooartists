@@ -44,16 +44,31 @@ export function resolveMode(env: ServerEnv): DataMode {
   };
 }
 
-export function demoAllowed(hostname: string, env: ServerEnv): boolean {
+/**
+ * Demo data is for local development only.
+ *
+ * Do not trust `hostname` alone: on the Node adapter, Astro rebuilds the
+ * request URL as `localhost` unless `security.allowedDomains` lists the host,
+ * so a public server would look like localhost. Outside `astro dev`, demo
+ * runs only when FLTA_DEMO=1 is set on purpose.
+ */
+export function demoAllowed(hostname: string, env: ServerEnv, isDev: boolean = import.meta.env.DEV): boolean {
   if (env.FLTA_DEMO === "0") return false;
   if (env.FLTA_DEMO === "1") return true;
+  if (!isDev) return false;
+  return isLoopbackHost(hostname);
+}
+
+/** True for localhost, 127.0.0.1 and ::1 (with or without brackets). */
+export function isLoopbackHost(hostname: string): boolean {
   const host = hostname.replace(/^\[|\]$/g, "").toLowerCase();
   return host === "localhost" || host === "127.0.0.1" || host === "::1";
 }
 
-export function sessionSecret(env: ServerEnv, mode: "demo" | "supabase"): string {
+export function sessionSecret(env: ServerEnv, mode: "demo" | "supabase", isDev: boolean = import.meta.env.DEV): string {
   const secret = env.SESSION_SECRET?.trim() ?? "";
   if (secret.length >= 16) return secret;
-  if (mode === "demo") return "dev-only-demo-session-secret";
-  throw new Error("Set SESSION_SECRET to a random string of at least 16 characters before using Supabase auth.");
+  // The fixed demo secret is public, so it is only acceptable under `astro dev`.
+  if (mode === "demo" && isDev) return "dev-only-demo-session-secret";
+  throw new Error("Set SESSION_SECRET to a random string of at least 16 characters (also required for FLTA_DEMO=1 previews).");
 }

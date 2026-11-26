@@ -22,8 +22,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (mode.mode === "demo" && !allowedDemo) {
       return plain(
         503,
-        "This server has no Supabase configuration. Demo artists are only shown on localhost. Set the Supabase keys, or set FLTA_DEMO=1 for a private preview.",
+        "This server has no Supabase configuration. Demo artists only run under npm run dev. Set the Supabase keys, or set FLTA_DEMO=1 for a private preview.",
       );
+    }
+    if (mode.mode === "demo" && !import.meta.env.DEV && (env.SESSION_SECRET?.trim().length ?? 0) < 16) {
+      return plain(503, "FLTA_DEMO=1 outside npm run dev also needs SESSION_SECRET (at least 16 random characters).");
     }
     if (mode.mode === "demo") {
       const token = context.cookies.get("flta_session")?.value;
