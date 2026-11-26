@@ -37,7 +37,7 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
           POSTGRES_DB: flta
         ports:
           - 5432:5432
@@ -57,4 +57,4 @@ jobs:
       - run: npm ci
       - run: npm test
         env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/flta
+          DATABASE_URL: postgres://postgres@localhost:5432/flta
