@@ -1,0 +1,73 @@
+---
+export const prerender = false;
+
+import Flash from '../../components/Flash.astro';
+import Base from '../../layouts/Base.astro';
+import { CITIES } from '../../lib/cities';
+import { getRepository } from '../../lib/repository';
+import { STYLES } from '../../lib/styles';
+import { siteConfig } from '../../config/site';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/artist/login?next=/artist/listing');
+if (user.role !== 'artist') return Astro.redirect('/admin');
+const repo = await getRepository(Astro.cookies.get('sb-access-token')?.value);
+const data = await repo.dashboard(user);
+const listing = data.listing;
+const field = 'mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3';
+---
+
+<Base title={`Edit listing · ${siteConfig.brandName}`}>
+  <main class="mx-auto max-w-2xl px-6 py-12">
+    <h1 class="mb-6 text-4xl font-bold">{listing ? 'Edit listing' : 'Create listing'}</h1>
+    <Flash />
+    <form method="post" action="/api/listings" class="mt-6 grid gap-4">
+      <label>Name
+        <input required minlength="2" maxlength="80" name="display_name" value={listing?.displayName ?? ''} class={field} />
+      </label>
+      <label>City
+        <select name="city" class={field}>
+          {CITIES.map((city) => <option value={city.slug} selected={listing?.citySlug === city.slug}>{city.name}, {city.state}</option>)}
+        </select>
+      </label>
+      <label>ZIP in that city (optional)
+        <input name="zip" inputmode="numeric" pattern="\d{5}" value={listing?.zip ?? ''} class={field} />
+      </label>
+      <label>Shop name (optional, plain text)
+        <input maxlength="80" name="shop_name" value={listing?.shopName ?? ''} class={field} />
+      </label>
+      <fieldset>
+        <legend class="mb-2">Styles</legend>
+        <div class="grid gap-2 sm:grid-cols-2">
+          {STYLES.map((style) => (
+            <label class="flex items-center gap-2">
+              <input type="checkbox" name="styles" value={style.slug} checked={listing?.styleSlugs.includes(style.slug)} />
+              {style.name}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <label>Bio
+        <textarea required minlength="40" name="bio" rows="6" class={field}>{listing?.bio ?? ''}</textarea>
+      </label>
+      <label>Hours
+        <input name="hours" value={listing?.hours ?? 'By appointment'} class={field} />
+      </label>
+      <label>Contact preference
+        <select name="contact_preference" class={field}>
+          <option value="email" selected={!listing || listing.contactPreference === 'email'}>Email</option>
+          <option value="phone" selected={listing?.contactPreference === 'phone'}>Phone</option>
+          <option value="either" selected={listing?.contactPreference === 'either'}>Either</option>
+        </select>
+      </label>
+      <label>Phone
+        <input name="phone" value={listing?.phone ?? ''} class={field} />
+      </label>
+      <label class="flex items-start gap-3">
+        <input type="checkbox" name="published" checked={!listing || listing.published} />
+        <span>Show this listing publicly after a moderator approves it.</span>
+      </label>
+      <button class="w-fit rounded-full bg-ink px-5 py-3 font-semibold" type="submit">Save listing</button>
+    </form>
+  </main>
+</Base>

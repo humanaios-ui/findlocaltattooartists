@@ -1,0 +1,28 @@
+---
+export const prerender = false;
+
+import Flash from '../../components/Flash.astro';
+import Base from '../../layouts/Base.astro';
+import { siteConfig } from '../../config/site';
+
+if (Astro.locals.user?.role === 'admin') return Astro.redirect('/admin');
+---
+
+<Base title={`Operator login · ${siteConfig.brandName}`}>
+  <main class="mx-auto max-w-md px-6 py-16">
+    <h1 class="mb-6 text-4xl font-bold">Operator login</h1>
+    <p class="mb-6 text-white/70">For the designated moderator. This page is not linked from the public site.</p>
+    <Flash />
+    <form method="post" action="/api/auth/login" class="mt-6 grid gap-4">
+      <input type="hidden" name="back" value="/admin/login" />
+      <input type="hidden" name="next" value="/admin" />
+      <label>Email
+        <input required type="email" name="email" autocomplete="username" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" />
+      </label>
+      <label>Password
+        <input required type="password" name="password" autocomplete="current-password" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" />
+      </label>
+      <button class="rounded-full bg-ink px-5 py-3 font-semibold" type="submit">Log in</button>
+    </form>
+  </main>
+</Base>

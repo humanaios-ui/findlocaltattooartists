@@ -1,0 +1,90 @@
+---
+export const prerender = false;
+
+import Flash from '../../components/Flash.astro';
+import PortfolioGallery from '../../components/PortfolioGallery.astro';
+import Base from '../../layouts/Base.astro';
+import { CITIES } from '../../lib/cities';
+import { getRepository } from '../../lib/repository';
+import { siteConfig } from '../../config/site';
+
+const slug = Astro.params.slug ?? '';
+const repo = await getRepository(Astro.cookies.get('sb-access-token')?.value);
+const profile = slug ? await repo.publicProfile(slug) : null;
+if (!profile) Astro.response.status = 404;
+const title = profile ? `${profile.listing.displayName} · ${profile.cityLabel}` : 'Artist not found';
+---
+
+<Base title={`${title} · ${siteConfig.brandName}`} description={profile?.listing.bio ?? 'This listing is not public.'}>
+  <main class="mx-auto max-w-5xl px-6 py-12">
+    {
+      !profile ? (
+        <div class="text-center">
+          <h1 class="mb-6 text-4xl font-bold">Page not found</h1>
+          <a class="text-ink underline" href="/search">Search artists</a>
+        </div>
+      ) : (
+        <article>
+          <Flash />
+          <p class="mb-3 text-sm text-white/60">{profile.cityLabel}{profile.listing.shopName ? ` · ${profile.listing.shopName}` : ''}</p>
+          <div class="mb-6 flex flex-wrap items-center gap-3">
+            <h1 class="text-4xl font-bold md:text-5xl">{profile.listing.displayName}</h1>
+            {profile.featured && <span class="text-sm font-semibold tracking-wide text-ink uppercase">Featured</span>}
+          </div>
+          <p class="mb-4 text-white/80">{profile.styles.map((style) => style.name).join(' · ')}</p>
+          <p class="mb-2 text-white/70">{profile.listing.hours}</p>
+          {profile.listing.phone && profile.listing.contactPreference !== 'email' && <p class="mb-6 text-white/70">{profile.listing.phone}</p>}
+          <p class="mb-10 max-w-3xl whitespace-pre-wrap text-lg leading-relaxed">{profile.listing.bio}</p>
+          <PortfolioGallery images={profile.images} />
+          <section id="book" class="mt-12 rounded-3xl border border-white/10 bg-white/5 p-6">
+            <h2 class="text-2xl font-semibold">Book {profile.listing.displayName}</h2>
+            <p class="mt-2 mb-6 max-w-2xl text-white/70">
+              This sends a request. The artist confirms, declines, or proposes another time. Nothing is charged on this site.
+            </p>
+            <form method="post" action="/api/bookings" class="grid gap-4 md:grid-cols-2">
+              <input type="hidden" name="listing_slug" value={profile.listing.slug} />
+              <label>Your name
+                <input required name="guest_name" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" />
+              </label>
+              <label>Email
+                <input required type="email" name="guest_email" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" />
+              </label>
+              <label>Phone
+                <input required name="guest_phone" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" />
+              </label>
+              <label>Preferred city
+                <select name="preferred_city" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3">
+                  {CITIES.map((city) => <option value={city.slug} selected={city.slug === profile.listing.citySlug}>{city.name}</option>)}
+                </select>
+              </label>
+              <label class="md:col-span-2">Preferred dates
+                <input required name="preferred_dates" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" />
+              </label>
+              <label class="md:col-span-2">Style or reference notes
+                <textarea required name="notes" rows="4" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3"></textarea>
+              </label>
+              <label class="flex items-start gap-3 md:col-span-2">
+                <input required type="checkbox" name="age" class="mt-1" />
+                <span>I confirm I am 18 or older and I want this artist to receive my request.</span>
+              </label>
+              <button class="w-fit rounded-full bg-ink px-6 py-3 font-semibold" type="submit">Book</button>
+            </form>
+          </section>
+          <details class="mt-8">
+            <summary class="cursor-pointer text-white/70">Report this listing</summary>
+            <form method="post" action="/api/reports" class="mt-4 grid max-w-xl gap-3">
+              <input type="hidden" name="slug" value={profile.listing.slug} />
+              <label>Email (optional)
+                <input type="email" name="email" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" />
+              </label>
+              <label>What should a moderator look at?
+                <textarea required minlength="10" name="reason" rows="4" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3"></textarea>
+              </label>
+              <button class="w-fit rounded-full border border-white/20 px-4 py-2" type="submit">Send report</button>
+            </form>
+          </details>
+        </article>
+      )
+    }
+  </main>
+</Base>

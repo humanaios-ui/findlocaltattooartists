@@ -3,3 +3,20 @@
 @theme {
   --color-ink: #9f1239;
 }
+
+:focus-visible {
+  outline: 2px solid #9f1239;
+  outline-offset: 2px;
+}
+
+dialog {
+  color: white;
+  background: #111;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 1.5rem;
+  max-width: min(92vw, 48rem);
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.82);
+}

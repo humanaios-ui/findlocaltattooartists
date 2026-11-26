@@ -1,15 +1,18 @@
 ---
 import '../styles/global.css';
+import { siteConfig, resolveSiteUrl } from '../config/site';
+import { CITIES, cityPath } from '../lib/cities';
 
 interface Props {
   title: string;
   description?: string;
+  overlay?: boolean;
 }
 
-const {
-  title,
-  description = 'Find tattoo artists in Phoenix, AZ and Fort Walton Beach, FL.',
-} = Astro.props;
+const { title, description = siteConfig.description, overlay = false } = Astro.props;
+const user = Astro.locals.user;
+const showDemo = Astro.locals.demo === true;
+const canonical = new URL(Astro.url.pathname, resolveSiteUrl({ PUBLIC_SITE_URL: import.meta.env.PUBLIC_SITE_URL }));
 ---
 
 <!doctype html>
@@ -18,9 +21,58 @@ const {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonical.href} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title}</title>
   </head>
-  <body class="bg-black text-white overflow-x-hidden antialiased">
+  <body class="overflow-x-hidden bg-black text-white antialiased">
+    {
+      showDemo && (
+        <p class="bg-ink px-4 py-2 text-center text-sm text-white">
+          Demo mode. These artists are fictional and stay on this machine.
+          <a class="underline" href="/demo/inbox">Demo inbox</a>
+        </p>
+      )
+    }
+    <header class:list={['z-20 border-white/10', overlay ? 'absolute inset-x-0 top-0 border-b-0' : 'border-b bg-black/90']}>
+      <div class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-4">
+        <a href="/" class="text-lg font-semibold tracking-tight text-ink">{siteConfig.brandName}</a>
+        <nav class="flex flex-wrap items-center gap-4 text-sm">
+          {CITIES.map((city) => <a class="hover:text-ink" href={cityPath(city.slug)}>{city.name}</a>)}
+          {
+            user?.role === 'admin' && <a class="hover:text-ink" href="/admin">Moderation</a>
+          }
+          {
+            user?.role === 'artist' ? (
+              <a class="hover:text-ink" href="/artist/dashboard">Your listing</a>
+            ) : (
+              <a class="hover:text-ink" href="/artist/login">Artist login</a>
+            )
+          }
+          {
+            user && (
+              <form method="post" action="/api/auth/logout">
+                <button class="hover:text-ink" type="submit">Log out</button>
+              </form>
+            )
+          }
+        </nav>
+      </div>
+    </header>
     <slot />
+    <footer class="border-t border-white/10 px-6 py-10 text-sm text-white/70">
+      <div class="mx-auto flex max-w-5xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p>{siteConfig.brandName}</p>
+        <nav class="flex flex-wrap gap-4">
+          {CITIES.map((city) => <a class="hover:text-white" href={cityPath(city.slug)}>{city.name}</a>)}
+          <a class="hover:text-white" href="/terms">Terms</a>
+          <a class="hover:text-white" href="/privacy">Privacy</a>
+          <a class="hover:text-white" href="/artist/login">Artist login</a>
+        </nav>
+      </div>
+      <p class="mx-auto mt-4 max-w-5xl">
+        Two cities only: Phoenix, AZ and Fort Walton Beach, FL. A booking is a request the artist confirms. This site does not take payment.
+      </p>
+    </footer>
   </body>
 </html>

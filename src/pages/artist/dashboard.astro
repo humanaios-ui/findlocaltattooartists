@@ -1,0 +1,100 @@
+---
+export const prerender = false;
+
+import Flash from '../../components/Flash.astro';
+import Base from '../../layouts/Base.astro';
+import { cityLabel } from '../../lib/cities';
+import { getRepository } from '../../lib/repository';
+import { styleName } from '../../lib/styles';
+import { siteConfig } from '../../config/site';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/artist/login?next=/artist/dashboard');
+if (user.role !== 'artist') return Astro.redirect('/admin');
+const repo = await getRepository(Astro.cookies.get('sb-access-token')?.value);
+const data = await repo.dashboard(user);
+const listing = data.listing;
+const live = listing?.published && listing.moderationStatus === 'approved';
+---
+
+<Base title={`Your listing · ${siteConfig.brandName}`}>
+  <main class="mx-auto max-w-5xl px-6 py-12">
+    <h1 class="mb-2 text-4xl font-bold">Your listing</h1>
+    <p class="mb-6 text-white/60">{data.email}</p>
+    <Flash />
+    {
+      !listing ? (
+        <p class="mt-6">You don’t have a listing yet. <a class="text-ink underline" href="/artist/listing">Create one</a></p>
+      ) : (
+        <section class="mt-6 rounded-3xl border border-white/10 p-6">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-2xl font-semibold">{listing.displayName}</h2>
+            <span class="rounded-full border border-white/20 px-3 py-1 text-sm">{listing.moderationStatus}{listing.published ? '' : ' · unpublished'}</span>
+          </div>
+          <p class="mt-3 text-white/70">{cityLabel(listing.citySlug)} · {listing.styleSlugs.map((slug) => styleName(slug)).join(' · ')}</p>
+          {listing.moderationStatus === 'pending' && <p class="mt-3">A moderator has to approve this before it appears in search.</p>}
+          <div class="mt-4 flex flex-wrap gap-4 text-sm">
+            <a class="text-ink underline" href="/artist/listing">Edit listing</a>
+            <a class="text-ink underline" href="/artist/bookings">Requests ({data.requestedCount} waiting)</a>
+            {live && <a class="text-ink underline" href={`/artists/${listing.slug}`}>Public page</a>}
+          </div>
+        </section>
+      )
+    }
+
+    {
+      listing && (
+        <section class="mt-10">
+          <h2 class="mb-4 text-2xl font-semibold">Portfolio</h2>
+          <p class="mb-4 max-w-2xl text-sm text-white/70">
+            Photos are compressed to WebP in your browser before upload. New images stay pending until a moderator approves them. Up to 12.
+          </p>
+          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {data.images.map((image) => (
+              <figure class="overflow-hidden rounded-3xl border border-white/10">
+                <img src={image.url} alt={image.alt} class="aspect-[4/5] w-full object-cover" />
+                <figcaption class="space-y-2 p-4 text-sm">
+                  <p>{image.alt}</p>
+                  <p class="text-white/60">{image.tag} · {image.moderationStatus}</p>
+                  <form method="post" action="/api/portfolio">
+                    <input type="hidden" name="intent" value="delete" />
+                    <input type="hidden" name="image_id" value={image.id} />
+                    <button class="text-ink underline" type="submit">Remove</button>
+                  </form>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+          <form id="portfolio-upload" method="post" action="/api/portfolio" enctype="multipart/form-data" class="mt-6 grid max-w-xl gap-3">
+            <label>Image
+              <input required type="file" name="file" accept="image/*" class="mt-1 block w-full" />
+            </label>
+            <label>Description
+              <input required minlength="3" name="alt" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" />
+            </label>
+            <label>Healed or fresh
+              <select name="tag" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3">
+                <option value="unspecified">Unspecified</option>
+                <option value="healed">Healed</option>
+                <option value="fresh">Fresh</option>
+              </select>
+            </label>
+            <label class="flex items-start gap-3">
+              <input required type="checkbox" name="image_rights" class="mt-1" />
+              <span>I have the right to publish this image, including client consent if it shows a person.</span>
+            </label>
+            <p data-upload-status class="text-sm text-white/60"></p>
+            <button class="w-fit rounded-full bg-ink px-5 py-3 font-semibold" type="submit">Upload</button>
+            <noscript><p>JavaScript is required so the photo can be compressed to WebP before upload.</p></noscript>
+          </form>
+        </section>
+      )
+    }
+  </main>
+</Base>
+
+<script>
+  import { bindPortfolioUpload } from '../../scripts/compress';
+  const form = document.querySelector<HTMLFormElement>('#portfolio-upload');
+  if (form) bindPortfolioUpload(form);
+</script>

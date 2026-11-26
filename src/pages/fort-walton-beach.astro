@@ -1,0 +1,11 @@
+---
+export const prerender = false;
+
+import CityIndex from '../components/CityIndex.astro';
+import { cityBySlug } from '../lib/cities';
+
+const city = cityBySlug('fort-walton-beach');
+if (!city) throw new Error('Fort Walton Beach is missing from the city list.');
+---
+
+<CityIndex city={city} />

@@ -10,9 +10,13 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^14.4.9",
+    "@astrojs/node": "^11.1.14",
+    "@astrojs/vercel": "^11.0.22",
     "@supabase/supabase-js": "^2.119.2",
     "@tailwindcss/vite": "^4.3.5",
     "astro": "^7.4.13",
@@ -20,6 +24,10 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vitest": "^5.1.2"
+  },
+  "overrides": {
+    "path-to-regexp": "6.3.0"
   }
 }

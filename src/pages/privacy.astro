@@ -1,0 +1,28 @@
+---
+import Base from '../layouts/Base.astro';
+import { siteConfig } from '../config/site';
+---
+
+<Base title={`Privacy · ${siteConfig.brandName}`} description="Draft privacy notice for the two-city artist directory.">
+  <main class="mx-auto max-w-3xl px-6 py-12">
+    <p class="mb-4 inline-block rounded-full bg-ink px-3 py-1 text-sm font-semibold">DRAFT — not legal advice, not reviewed by counsel</p>
+    <h1 class="mb-6 text-4xl font-bold">Privacy</h1>
+    <div class="space-y-4 leading-relaxed text-white/85">
+      <p>
+        This is a placeholder privacy notice. A human has to review it before it is treated as the real policy. It describes what this version of {siteConfig.brandName} is built to store.
+      </p>
+      <p>
+        Artist accounts store an email, a password handled by the auth provider, the 18+ acknowledgement, and the image-rights acknowledgement. A listing stores the name, city, optional shop name, styles, bio, hours, contact preference, optional phone, and optional ZIP. Portfolio images store the picture, a short description, and an optional healed or fresh tag.
+      </p>
+      <p>
+        A guest booking request stores the guest’s name, email, and phone, the preferred city, notes, preferred dates, the 18+ acknowledgement, and the status the artist sets. The guest gets a private link to see that status. Reports store the reason and an optional email.
+      </p>
+      <p>
+        When Supabase is configured, that project holds the account, the rows, and the images. When it is not configured, the local demo keeps fictional artists and messages in the server process. Demo mode is not the public site. This version has no ads, no affiliates, and no sale of personal information built into the product.
+      </p>
+      <p>
+        Email about a request is sent through a pluggable provider (or printed to the server log in demo mode). The address the provider sends from has to be verified with that provider before real mail will go out.
+      </p>
+    </div>
+  </main>
+</Base>

@@ -1,0 +1,31 @@
+---
+export const prerender = false;
+
+import Flash from '../../components/Flash.astro';
+import Base from '../../layouts/Base.astro';
+import { siteConfig } from '../../config/site';
+
+if (Astro.locals.user?.role === 'artist') return Astro.redirect('/artist/dashboard');
+if (Astro.locals.user?.role === 'admin') return Astro.redirect('/admin');
+const next = Astro.url.searchParams.get('next') ?? '';
+---
+
+<Base title={`Artist login · ${siteConfig.brandName}`}>
+  <main class="mx-auto max-w-md px-6 py-16">
+    <h1 class="mb-6 text-4xl font-bold">Artist login</h1>
+    <p class="mb-6 text-white/70">Artists only. There is no shop account and no customer account.</p>
+    <Flash />
+    <form method="post" action="/api/auth/login" class="mt-6 grid gap-4">
+      <input type="hidden" name="back" value="/artist/login" />
+      {next && <input type="hidden" name="next" value={next} />}
+      <label>Email
+        <input required type="email" name="email" autocomplete="username" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" />
+      </label>
+      <label>Password
+        <input required type="password" name="password" autocomplete="current-password" minlength="8" class="mt-1 w-full rounded-2xl border border-white/20 bg-black px-4 py-3" />
+      </label>
+      <button class="rounded-full bg-ink px-5 py-3 font-semibold" type="submit">Log in</button>
+    </form>
+    <p class="mt-6 text-sm text-white/70">New here? <a class="text-ink underline" href="/artist/signup">Create an artist account</a></p>
+  </main>
+</Base>
