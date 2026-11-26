@@ -25,7 +25,10 @@ export function hostHeaderName(host: string): string {
   if (!host || /[\s/@?#\\]/.test(host)) return "";
   try {
     const parsed = new URL(`http://${host}`);
-    return parsed.host === host.toLowerCase() ? parsed.hostname.replace(/^\[|\]$/g, "") : "";
+    const given = host.toLowerCase();
+    // URL drops the default port, so "localhost:80" parses to host "localhost".
+    const same = parsed.host === given || `${parsed.host}:80` === given;
+    return same ? parsed.hostname.replace(/^\[|\]$/g, "") : "";
   } catch {
     return "";
   }

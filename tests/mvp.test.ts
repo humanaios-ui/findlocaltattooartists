@@ -11,7 +11,7 @@ import { createNotificationProvider } from "../src/lib/email/provider";
 import { bookingRequestedEmails } from "../src/lib/email/templates";
 import { isWebp, validatePortfolioUpload } from "../src/lib/images";
 import { requireAcknowledgements, validateListingInput } from "../src/lib/listing";
-import { demoAllowed, resolveMode } from "../src/lib/mode";
+import { demoAllowed, resolveMode, sessionSecret } from "../src/lib/mode";
 import { hostHeaderName, linkOrigin, secureCookie } from "../src/lib/http";
 import { isPublicRecord, runSearch } from "../src/lib/search";
 import { STYLES } from "../src/lib/styles";
@@ -280,6 +280,8 @@ describe("production guards (review of #3)", () => {
     expect(linkOrigin(req("localhost:4321"), env, true)).toBe("http://localhost:4321");
     expect(hostHeaderName("[::1]:4321")).toBe("::1");
     expect(hostHeaderName("localhost:80@evil.example")).toBe("");
+    expect(hostHeaderName("localhost:80")).toBe("localhost");
+    expect(linkOrigin(req("localhost:80"), env, true)).toBe("http://localhost:80");
   });
 
   it("marks cookies Secure in production even when request.url is http", () => {
@@ -287,5 +289,13 @@ describe("production guards (review of #3)", () => {
     expect(secureCookie(req, true)).toBe(true);
     expect(secureCookie(req, false)).toBe(false);
     expect(secureCookie(new Request("https://example.com/x"), false)).toBe(true);
+  });
+});
+
+describe("demo session secret (review of #4)", () => {
+  it("uses the fixed demo secret only in dev", () => {
+    expect(sessionSecret({}, "demo", true)).toBe("dev-only-demo-session-secret");
+    expect(() => sessionSecret({ FLTA_DEMO: "1" }, "demo", false)).toThrow(/SESSION_SECRET/);
+    expect(sessionSecret({ SESSION_SECRET: "a-long-random-secret-value" }, "demo", false)).toBe("a-long-random-secret-value");
   });
 });

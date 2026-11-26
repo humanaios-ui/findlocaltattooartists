@@ -65,9 +65,10 @@ export function isLoopbackHost(hostname: string): boolean {
   return host === "localhost" || host === "127.0.0.1" || host === "::1";
 }
 
-export function sessionSecret(env: ServerEnv, mode: "demo" | "supabase"): string {
+export function sessionSecret(env: ServerEnv, mode: "demo" | "supabase", isDev: boolean = import.meta.env.DEV): string {
   const secret = env.SESSION_SECRET?.trim() ?? "";
   if (secret.length >= 16) return secret;
-  if (mode === "demo") return "dev-only-demo-session-secret";
-  throw new Error("Set SESSION_SECRET to a random string of at least 16 characters before using Supabase auth.");
+  // The fixed demo secret is public, so it is only acceptable under `astro dev`.
+  if (mode === "demo" && isDev) return "dev-only-demo-session-secret";
+  throw new Error("Set SESSION_SECRET to a random string of at least 16 characters (also required for FLTA_DEMO=1 previews).");
 }
