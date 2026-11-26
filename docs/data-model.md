@@ -30,4 +30,4 @@ An admin, determined by `user_roles`, can read the queue and change moderation a
 
 ## Demo mode
 
-With no Supabase keys, the app serves fictional artists from `src/lib/demo/seed.ts` on localhost only. That data is not in this SQL file.
+With no Supabase keys, the app serves fictional artists from `src/lib/demo/seed.ts` under `npm run dev` only (or with `FLTA_DEMO=1`). That data is not in this SQL file.

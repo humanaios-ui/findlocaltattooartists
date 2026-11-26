@@ -1,5 +1,6 @@
 import { resolveSiteUrl } from "../config/site";
 import { AppError, isAppError } from "./errors";
+import { isLoopbackHost } from "./mode";
 
 export function redirect(location: string): Response {
   return new Response(null, { status: 303, headers: { Location: location } });
@@ -19,14 +20,29 @@ export function sameOrigin(request: Request): void {
   if (originHost !== host) throw new AppError("origin");
 }
 
-/** Links in email use the canonical site, except when the form was submitted on localhost. */
-export function linkOrigin(request: Request, env: { PUBLIC_SITE_URL?: string }): string {
+/** Hostname from a Host header, or "" if it does not parse as a plain host[:port]. */
+export function hostHeaderName(host: string): string {
+  if (!host || /[\s/@?#\\]/.test(host)) return "";
+  try {
+    const parsed = new URL(`http://${host}`);
+    return parsed.host === host.toLowerCase() ? parsed.hostname.replace(/^\[|\]$/g, "") : "";
+  } catch {
+    return "";
+  }
+}
+
+/** Links in email use the canonical site, except in local development on localhost. */
+export function linkOrigin(
+  request: Request,
+  env: { PUBLIC_SITE_URL?: string },
+  isDev: boolean = import.meta.env.DEV,
+): string {
   const host = request.headers.get("host") ?? "";
-  const hostname = host.split(":")[0]?.replace(/^\[|\]$/g, "").toLowerCase();
-  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1") {
+  const hostname = hostHeaderName(host);
+  if (isDev && isLoopbackHost(hostname)) {
     const forwarded = request.headers.get("x-forwarded-proto");
     const proto = forwarded === "https" || new URL(request.url).protocol === "https:" ? "https" : "http";
-    return `${proto}://${host}`;
+    return `${proto}://${host.toLowerCase()}`;
   }
   return resolveSiteUrl(env);
 }
@@ -64,6 +80,11 @@ function withCode(back: string, code: string): string {
   return `${back}${join}error=${encodeURIComponent(code)}`;
 }
 
-export function secureCookie(request: Request): boolean {
-  return new URL(request.url).protocol === "https:";
+/**
+ * Production cookies are always Secure. Behind a TLS proxy on the Node
+ * adapter, request.url is http://localhost, so the protocol alone is wrong.
+ * Browsers still accept Secure cookies on http://localhost.
+ */
+export function secureCookie(request: Request, isProd: boolean = import.meta.env.PROD): boolean {
+  return isProd || new URL(request.url).protocol === "https:";
 }

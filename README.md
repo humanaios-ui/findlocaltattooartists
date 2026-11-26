@@ -27,7 +27,7 @@ npm ci
 npm run dev       # http://localhost:4321
 ```
 
-Leave `.env` empty. On localhost the site then uses fictional artists. They are not real people and they are not a launch supply. Other hosts refuse that demo unless `FLTA_DEMO=1` is set on purpose.
+Leave `.env` empty. Under `npm run dev` the site then uses fictional artists. They are not real people and they are not a launch supply. A built server (`npm run build`, any host, including `npm run preview`) refuses that demo unless `FLTA_DEMO=1` is set on purpose.
 
 | Who | Email | Password |
 |---|---|---|

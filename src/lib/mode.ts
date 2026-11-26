@@ -44,9 +44,23 @@ export function resolveMode(env: ServerEnv): DataMode {
   };
 }
 
-export function demoAllowed(hostname: string, env: ServerEnv): boolean {
+/**
+ * Demo data is for local development only.
+ *
+ * Do not trust `hostname` alone: on the Node adapter, Astro rebuilds the
+ * request URL as `localhost` unless `security.allowedDomains` lists the host,
+ * so a public server would look like localhost. Outside `astro dev`, demo
+ * runs only when FLTA_DEMO=1 is set on purpose.
+ */
+export function demoAllowed(hostname: string, env: ServerEnv, isDev: boolean = import.meta.env.DEV): boolean {
   if (env.FLTA_DEMO === "0") return false;
   if (env.FLTA_DEMO === "1") return true;
+  if (!isDev) return false;
+  return isLoopbackHost(hostname);
+}
+
+/** True for localhost, 127.0.0.1 and ::1 (with or without brackets). */
+export function isLoopbackHost(hostname: string): boolean {
   const host = hostname.replace(/^\[|\]$/g, "").toLowerCase();
   return host === "localhost" || host === "127.0.0.1" || host === "::1";
 }

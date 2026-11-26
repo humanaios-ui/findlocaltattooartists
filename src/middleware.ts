@@ -22,7 +22,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (mode.mode === "demo" && !allowedDemo) {
       return plain(
         503,
-        "This server has no Supabase configuration. Demo artists are only shown on localhost. Set the Supabase keys, or set FLTA_DEMO=1 for a private preview.",
+        "This server has no Supabase configuration. Demo artists only run under npm run dev. Set the Supabase keys, or set FLTA_DEMO=1 for a private preview.",
       );
     }
     if (mode.mode === "demo") {
