@@ -6,18 +6,25 @@ export function redirect(location: string): Response {
   return new Response(null, { status: 303, headers: { Location: location } });
 }
 
+/**
+ * Form posts must carry a same-origin browser signal.
+ * `Sec-Fetch-Site: same-origin` or `none` is enough. Otherwise `Origin` is required
+ * and its host must match a parsed Host header.
+ */
 export function sameOrigin(request: Request): void {
+  const fetchSite = request.headers.get("sec-fetch-site");
+  if (fetchSite === "same-origin" || fetchSite === "none") return;
+  if (fetchSite === "cross-site" || fetchSite === "same-site") throw new AppError("origin");
   const origin = request.headers.get("origin");
-  if (!origin) return;
-  const host = request.headers.get("host");
-  if (!host) throw new AppError("origin");
+  if (!origin) throw new AppError("origin");
   let originHost = "";
   try {
-    originHost = new URL(origin).host;
+    originHost = new URL(origin).hostname.replace(/^\[|\]$/g, "");
   } catch {
     throw new AppError("origin");
   }
-  if (originHost !== host) throw new AppError("origin");
+  const hostName = hostHeaderName(request.headers.get("host") ?? "");
+  if (!hostName || originHost.toLowerCase() !== hostName) throw new AppError("origin");
 }
 
 /** Hostname from a Host header, or "" if it does not parse as a plain host[:port]. */

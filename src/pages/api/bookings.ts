@@ -6,14 +6,22 @@ import { siteConfig } from "../../config/site";
 import { bookingRequestedEmails } from "../../lib/email/templates";
 import { AppError } from "../../lib/errors";
 import { fail, formChecked, formText, linkOrigin, readForm, redirect } from "../../lib/http";
+import { readEnv } from "../../lib/mode";
 import { tryDeliver } from "../../lib/notify";
+import { assertTurnstile, clientAddress, rateLimit } from "../../lib/rate-limit";
 import { getRepository } from "../../lib/repository";
 
-export const POST: APIRoute = async ({ request, locals, cookies }) => {
+export const POST: APIRoute = async (context) => {
+  const { request, locals, cookies } = context;
   const slug = new URL(request.url).searchParams.get("slug") ?? "";
   const back = slug ? `/artists/${slug}#book` : "/search";
   try {
     const form = await readForm(request);
+    const ip = clientAddress(() => context.clientAddress);
+    const guestEmail = formText(form, "guest_email").trim().toLowerCase();
+    await rateLimit(`booking-ip:${ip}`, 8, 60 * 60 * 1000);
+    if (guestEmail) await rateLimit(`booking-email:${guestEmail}`, 5, 60 * 60 * 1000);
+    await assertTurnstile(formText(form, "cf-turnstile-response"), ip, readEnv());
     const listingSlug = formText(form, "listing_slug");
     const city = formText(form, "preferred_city");
     if (!isCitySlug(city)) throw new AppError("city");

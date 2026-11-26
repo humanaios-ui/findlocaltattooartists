@@ -7,6 +7,7 @@ import {
   nextModeration,
   requireAcknowledgements,
   requireBookingAge,
+  listingNeedsReview,
   slugifyName,
   uniqueSlug,
   validateListingInput,
@@ -202,6 +203,7 @@ export function createDemoRepository(db: DemoDatabase, clock: () => Date = () =>
         db.listings.push(listing);
         return listing;
       }
+      if (listingNeedsReview(existing, value)) existing.moderationStatus = "pending";
       existing.displayName = value.displayName;
       existing.citySlug = value.citySlug;
       existing.shopName = value.shopName || null;

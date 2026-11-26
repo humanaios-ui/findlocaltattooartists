@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import Flash from '../../components/Flash.astro';
+import Turnstile from '../../components/Turnstile.astro';
 import Base from '../../layouts/Base.astro';
 import { siteConfig } from '../../config/site';
 
@@ -28,6 +29,7 @@ if (Astro.locals.user) return Astro.redirect('/artist/dashboard');
         <input required type="checkbox" name="image_rights" class="mt-1" />
         <span>I have the right to publish my portfolio images, including consent from the client for any tattoo of a person.</span>
       </label>
+      <Turnstile />
       <button class="rounded-full bg-ink px-5 py-3 font-semibold" type="submit">Create account</button>
     </form>
   </main>

@@ -151,6 +151,8 @@ export interface AuthTokens {
 export interface LoginResult {
   user: SessionUser;
   tokens: AuthTokens | null;
+  /** Supabase sign-up is waiting on the address confirmation link. */
+  confirmEmail?: boolean;
 }
 
 export interface ListingInput {
