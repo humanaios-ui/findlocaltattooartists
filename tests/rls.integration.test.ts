@@ -53,6 +53,19 @@ describeIf("postgres row level security", () => {
       expect(anonBefore.rows.map((row: { slug: string }) => row.slug)).toEqual(["artist-a"]);
 
       await asUser(client, artistA, async () => {
+        await client.query(`update public.listings set published = false where id = $1`, [listing]);
+      });
+      const afterPublishToggle = await client.query(
+        `select moderation_status, published from public.listings where id = $1`,
+        [listing],
+      );
+      expect(afterPublishToggle.rows[0].moderation_status).toBe("approved");
+      expect(afterPublishToggle.rows[0].published).toBe(false);
+      await asUser(client, artistA, async () => {
+        await client.query(`update public.listings set published = true where id = $1`, [listing]);
+      });
+
+      await asUser(client, artistA, async () => {
         await client.query(`update public.listings set bio = $2 where id = $1`, [
           listing,
           "Rewritten bio that must go back to pending review before it is public again.",

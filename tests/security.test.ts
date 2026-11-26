@@ -61,6 +61,21 @@ describe("auth, cookies, and request gates", () => {
     expect(() => sameOrigin(request({ origin: "http://evil.example", host: "localhost:4321" }))).toThrow(/origin/);
   });
 
+  it("does not send an unchanged approved listing back to review", () => {
+    expect(listingNeedsReview(listing, {
+      displayName: listing.displayName,
+      citySlug: listing.citySlug,
+      shopName: listing.shopName ?? "",
+      bio: listing.bio,
+      hours: listing.hours,
+      contactPreference: listing.contactPreference,
+      phone: listing.phone ?? "",
+      zip: listing.zip ?? "",
+      styleSlugs: [...listing.styleSlugs],
+      published: false,
+    })).toBe(false);
+  });
+
   it("sends a public edit of an approved listing back to pending", () => {
     expect(listingNeedsReview(listing, {
       displayName: "Rosa Navarro",

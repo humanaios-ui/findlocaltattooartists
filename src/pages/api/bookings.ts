@@ -2,6 +2,7 @@ export const prerender = false;
 
 import type { APIRoute } from "astro";
 import { isCitySlug } from "../../lib/cities";
+import { isEmail, requireBookingAge } from "../../lib/listing";
 import { siteConfig } from "../../config/site";
 import { bookingRequestedEmails } from "../../lib/email/templates";
 import { AppError } from "../../lib/errors";
@@ -17,10 +18,19 @@ export const POST: APIRoute = async (context) => {
   const back = slug ? `/artists/${slug}#book` : "/search";
   try {
     const form = await readForm(request);
-    const ip = clientAddress(() => context.clientAddress);
     const guestEmail = formText(form, "guest_email").trim().toLowerCase();
+    const guestPhone = formText(form, "guest_phone");
+    const notes = formText(form, "notes").trim();
+    const preferredDates = formText(form, "preferred_dates").trim();
+    requireBookingAge(formChecked(form, "age"));
+    if (!isCitySlug(formText(form, "preferred_city"))) throw new AppError("city");
+    if (formText(form, "guest_name").trim().length < 2) throw new AppError("name");
+    if (!isEmail(guestEmail)) throw new AppError("email");
+    if (guestPhone.replace(/\D/g, "").length < 7) throw new AppError("phone");
+    if (notes.length < 3 || preferredDates.length < 2) throw new AppError("booking");
+    const ip = clientAddress(() => context.clientAddress);
     await rateLimit(`booking-ip:${ip}`, 8, 60 * 60 * 1000);
-    if (guestEmail) await rateLimit(`booking-email:${guestEmail}`, 5, 60 * 60 * 1000);
+    await rateLimit(`booking-email:${guestEmail}`, 5, 60 * 60 * 1000);
     await assertTurnstile(formText(form, "cf-turnstile-response"), ip, readEnv());
     const listingSlug = formText(form, "listing_slug");
     const city = formText(form, "preferred_city");

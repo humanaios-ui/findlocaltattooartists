@@ -77,10 +77,14 @@ export function validateListingInput(raw: ListingInput): ListingInput {
   };
 }
 
+export function sameStyleSet(left: string[], right: string[]): boolean {
+  return [...left].sort().join("\0") === [...right].sort().join("\0");
+}
+
 /** An approved listing goes back to review when a public field changes. */
 export function listingNeedsReview(before: ListingRecord, next: ListingInput): boolean {
   if (before.moderationStatus !== "approved") return false;
-  const sameStyles = [...before.styleSlugs].sort().join("\0") === [...next.styleSlugs].sort().join("\0");
+  const sameStyles = sameStyleSet(before.styleSlugs, next.styleSlugs);
   return !sameStyles
     || before.displayName !== next.displayName
     || before.citySlug !== next.citySlug

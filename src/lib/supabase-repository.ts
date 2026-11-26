@@ -6,6 +6,7 @@ import { validateImageMeta, validatePortfolioUpload } from "./images";
 import {
   isEmail,
   nextModeration,
+  sameStyleSet,
   requireAcknowledgements,
   requireBookingAge,
   slugifyName,
@@ -386,13 +387,16 @@ export function createSupabaseRepository(
         dbError(updated.error);
       }
       if (!listingId) throw new AppError("server");
-      const cleared = await client.from("listing_styles").delete().eq("listing_id", listingId);
-      dbError(cleared.error);
-      if (value.styleSlugs.length) {
-        const styled = await client.from("listing_styles").insert(
-          value.styleSlugs.map((style) => ({ listing_id: listingId, style_slug: style })),
-        );
-        dbError(styled.error);
+      const currentStyles = (existing?.listing_styles ?? []).map((style) => style.style_slug);
+      if (!existing || !sameStyleSet(currentStyles, value.styleSlugs)) {
+        const cleared = await client.from("listing_styles").delete().eq("listing_id", listingId);
+        dbError(cleared.error);
+        if (value.styleSlugs.length) {
+          const styled = await client.from("listing_styles").insert(
+            value.styleSlugs.map((style) => ({ listing_id: listingId, style_slug: style })),
+          );
+          dbError(styled.error);
+        }
       }
       const fresh = await ownListing(user);
       const mapped = fresh ? mapListing(fresh) : null;
