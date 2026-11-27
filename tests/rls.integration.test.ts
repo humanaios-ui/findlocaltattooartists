@@ -14,6 +14,7 @@ describeIf("postgres row level security", () => {
       await client.query(readFileSync("supabase/migrations/20261126120000_init.sql", "utf8"));
       await client.query(readFileSync("supabase/migrations/20261126235500_harden_function_grants.sql", "utf8"));
       await client.query(readFileSync("supabase/migrations/20261127001500_rls_perf.sql", "utf8"));
+      await client.query(readFileSync("supabase/migrations/20261127013000_public_read_split.sql", "utf8"));
 
       const artistA = "00000000-0000-4000-8000-0000000000a1";
       const artistB = "00000000-0000-4000-8000-0000000000b1";
@@ -53,6 +54,12 @@ describeIf("postgres row level security", () => {
 
       const anonBefore = await asRole(client, "anon", async () => client.query(`select slug from public.listings`));
       expect(anonBefore.rows.map((row: { slug: string }) => row.slug)).toEqual(["artist-a"]);
+      const anonStyles = await asRole(client, "anon", async () =>
+        client.query(`select style_slug from public.listing_styles`),
+      );
+      expect(anonStyles.rows.map((row: { style_slug: string }) => row.style_slug)).toEqual(["traditional"]);
+      const anonImages = await asRole(client, "anon", async () => client.query(`select id from public.portfolio_images`));
+      expect(anonImages.rows).toHaveLength(0);
 
       await asUser(client, artistA, async () => {
         await client.query(`update public.listings set published = false where id = $1`, [listing]);
@@ -77,6 +84,19 @@ describeIf("postgres row level security", () => {
       expect(afterEdit.rows[0].moderation_status).toBe("pending");
       const anonAfter = await asRole(client, "anon", async () => client.query(`select slug from public.listings`));
       expect(anonAfter.rows).toHaveLength(0);
+      const anonStylesPending = await asRole(client, "anon", async () =>
+        client.query(`select style_slug from public.listing_styles`),
+      );
+      expect(anonStylesPending.rows).toHaveLength(0);
+      const ownerStylesPending = await asUser(client, artistA, async () =>
+        client.query(`select style_slug from public.listing_styles`),
+      );
+      expect(ownerStylesPending.rows).toHaveLength(1);
+      await asUser(client, artistA, async () => client.query(`select id from public.portfolio_images`));
+      const otherStylesPending = await asUser(client, artistB, async () =>
+        client.query(`select style_slug from public.listing_styles`),
+      );
+      expect(otherStylesPending.rows).toHaveLength(0);
 
       await asUser(client, artistB, async () => {
         await client.query(`update public.listings set display_name = 'Stolen' where id = $1`, [listing]);
