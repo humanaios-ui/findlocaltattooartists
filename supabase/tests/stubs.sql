@@ -50,3 +50,7 @@ $$;
 grant anon to current_user;
 grant authenticated to current_user;
 grant usage on schema public, auth, storage to anon, authenticated;
+-- Model API table privileges separately from RLS, so tests cannot pass just
+-- because a stub role lacks a table grant.
+grant select on storage.objects to anon, authenticated;
+grant insert, delete on storage.objects to authenticated;

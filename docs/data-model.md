@@ -14,9 +14,9 @@ Two cities only: Phoenix, AZ and Fort Walton Beach, FL. A listing’s `city_slug
 
 `listings.featured` and `listings.featured_until` are a sort key. Search and city pages put an active featured listing first, then the most recently updated. Nothing in this version sells that pin. There is no payments table.
 
-New listings and new images default to `pending`. A public page or search result requires `published` and `moderation_status = 'approved'`. Hidden and removed listings are not public. Approving a listing also approves its pending images. Later uploads stay pending until an image is approved on its own.
+New listings and new images default to `pending`. A public page or search result requires `published` and `moderation_status = 'approved'`. Hidden and removed listings are not public. Listing approval does not approve portfolio images. Each image requires its own moderator decision after inspection.
 
-Changing a public field on an approved listing (name, bio, city, shop, phone, hours, contact, ZIP, or styles) sets `moderation_status` back to `pending` unless the editor is an admin. The portfolio bucket is private. Public pages receive a 10-minute signed URL only for an approved image on a public listing. Removing an image, or removing the listing, deletes the stored object.
+Changing a public field on an approved listing (name, bio, city, shop, phone, hours, contact, ZIP, or styles) sets `moderation_status` back to `pending` unless the editor is an admin. The portfolio bucket is private and object writes are server-only. An image object key is bound to its owning auth user and image ID. Public pages receive a 10-minute signed URL only for an approved image on a public listing. The authenticated admin queue uses a private, non-cacheable preview for pending images. Removing an image, or removing the listing, deletes the stored object.
 
 A requested booking older than 14 days becomes `expired` the next time it is read. There is no payment, calendar, or instant book.
 
@@ -24,7 +24,7 @@ A requested booking older than 14 days becomes `expired` the next time it is rea
 
 The anon key can read cities, styles, ZIPs, and listings that are published and approved, plus the approved images and styles on those listings. It cannot read bookings, reports, artist emails, or pending rows.
 
-An artist can read and edit their own listing and images, but triggers reject changes to moderation, featured, and the booking’s guest fields. Status changes are limited to confirm, decline, cancel, and expire.
+An artist can read their own images and edit their own listing. Image creation/deletion runs through the authorized server after ownership and upload checks; metadata is immutable and only administrators can change image moderation. Triggers reject unauthorized changes to listing moderation, featured, and the booking’s guest fields. Status changes are limited to confirm, decline, cancel, and expire.
 
 Guests do not get a select policy on bookings. Creating a request and opening it by token go through the server with the service role, after the app checks the 18+ acknowledgement. The service role key must never use the `PUBLIC_` prefix.
 
