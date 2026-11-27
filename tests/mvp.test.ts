@@ -145,7 +145,16 @@ describe("accounts, bookings, moderation", () => {
     const queue = await repo.moderationQueue();
     const pending = queue.listings.find((listing) => listing.slug === "casey-quinn");
     expect(pending?.moderationStatus).toBe("pending");
+    const casey = await repo.login("casey@demo.invalid", DEMO_ARTIST_PASSWORD);
+    expect(casey?.user.artistId).toBeTruthy();
+    const pendingImage = await repo.addImage(casey!.user, {
+      bytes: webp(), alt: "Synthetic preview", tag: "unspecified", rights: true,
+    });
     await repo.moderateListing(pending!.id, "approve", NOW);
+    expect((await repo.publicProfile("casey-quinn", NOW))?.images.map((image) => image.id)).not.toContain(pendingImage.id);
+    expect((await repo.moderationQueue()).images.find((image) => image.id === pendingImage.id)?.moderationStatus).toBe("pending");
+    await repo.moderateImage(pendingImage.id, "approve");
+    expect((await repo.publicProfile("casey-quinn", NOW))?.images.map((image) => image.id)).toContain(pendingImage.id);
     const after = await repo.search({ q: "Casey Quinn" }, NOW);
     if (after.kind !== "results") throw new Error("after");
     expect(after.results.map((card) => card.slug)).toContain("casey-quinn");

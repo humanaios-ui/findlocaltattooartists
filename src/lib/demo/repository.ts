@@ -373,13 +373,7 @@ export function createDemoRepository(db: DemoDatabase, clock: () => Date = () =>
       const status = nextModeration(action);
       listing.moderationStatus = status;
       listing.updatedAt = nowIso(now);
-      if (status === "approved") {
-        for (const image of db.images) {
-          if (image.listingId === listing.id && image.moderationStatus === "pending") {
-            image.moderationStatus = "approved";
-          }
-        }
-      }
+      // Listing and image approvals remain separate.
     },
 
     async moderateImage(imageId, action: ModerateAction) {

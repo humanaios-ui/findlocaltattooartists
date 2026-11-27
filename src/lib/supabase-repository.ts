@@ -405,9 +405,9 @@ export function createSupabaseRepository(
     },
 
     async addImage(user, input: NewImageInput) {
-      if (!user.artistId) throw new AppError("forbidden");
+      if (user.role !== "artist" || !user.artistId) throw new AppError("forbidden");
       const listing = await ownListing(user);
-      if (!listing) throw new AppError("not-found");
+      if (!listing || listing.artist_id !== user.artistId) throw new AppError("not-found");
       const meta = validateImageMeta(input);
       const existing = (listing.portfolio_images ?? []).filter((image) => image.moderation_status !== "removed").length;
       validatePortfolioUpload(input.bytes, existing);
@@ -420,7 +420,8 @@ export function createSupabaseRepository(
         upsert: false,
       });
       dbError(uploaded.error, "image");
-      const inserted = await userClient().from("portfolio_images").insert({
+      // Metadata writes are server-only; the owned listing was checked above.
+      const inserted = await service.from("portfolio_images").insert({
         id: imageId,
         listing_id: listing.id,
         storage_path: path,
@@ -438,11 +439,16 @@ export function createSupabaseRepository(
     },
 
     async deleteImage(user, imageId) {
+      if (user.role !== "artist" || !user.artistId) throw new AppError("forbidden");
       const listing = await ownListing(user);
       const image = listing?.portfolio_images?.find((item) => item.id === imageId);
-      if (!listing || !image) throw new AppError("not-found");
-      const removed = await userClient().from("portfolio_images").delete().eq("id", imageId);
+      if (!listing || listing.artist_id !== user.artistId || !image) throw new AppError("not-found");
+      // Bind privileged object deletion to the authenticated owner's canonical key.
+      if (image.storage_path !== `${user.id}/${image.id}.webp`) throw new AppError("image");
+      const removed = await service.from("portfolio_images").delete().eq("id", imageId)
+        .eq("listing_id", listing.id).select("id").maybeSingle();
       dbError(removed.error);
+      if (!removed.data) throw new AppError("not-found");
       const stored = await service.storage.from("portfolio").remove([image.storage_path]);
       dbError(stored.error, "image");
     },
@@ -578,6 +584,10 @@ export function createSupabaseRepository(
 
     async moderationQueue() {
       const client = userClient();
+      // Explicit server-side gate before signing any pending image.
+      const admin = await client.rpc("is_admin");
+      dbError(admin.error);
+      if (admin.data !== true) throw new AppError("forbidden");
       const { data: listingRows, error } = await client.from("listings").select(`
         id, artist_id, slug, display_name, city_slug, shop_name, bio, hours, contact_preference, phone, zip,
         published, moderation_status, featured, featured_until, created_at, updated_at,
@@ -603,7 +613,8 @@ export function createSupabaseRepository(
           .map(async (row) => {
             const parent = Array.isArray(row.listings) ? row.listings[0] : row.listings;
             return {
-              ...(await mapImage(row, row.moderation_status === "approved")),
+              // Private, short-lived moderator preview; public queries still sign approved only.
+              ...(await mapImage(row, true)),
               listingId: row.listing_id,
               artistName: parent?.display_name ?? "Artist",
               listingSlug: parent?.slug ?? "",
@@ -635,14 +646,7 @@ export function createSupabaseRepository(
         updated_at: now.toISOString(),
       }).eq("id", listingId);
       dbError(updated.error);
-      if (status === "approved") {
-        const images = await userClient()
-          .from("portfolio_images")
-          .update({ moderation_status: "approved" })
-          .eq("listing_id", listingId)
-          .eq("moderation_status", "pending");
-        dbError(images.error);
-      }
+      // Listing approval does not approve individual portfolio images.
       if (status === "removed") {
         const files = await service.from("portfolio_images").select("storage_path").eq("listing_id", listingId);
         dbError(files.error);
